@@ -2,6 +2,5 @@
 body {
   @apply bg-background text-foreground;
   font-family: 'Roboto', sans-serif;
-  padding-bottom: 120px; /* Reduced to account for fixed footer */
   position: relative;
 }
