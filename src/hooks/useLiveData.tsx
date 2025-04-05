@@ -10,6 +10,8 @@ import {
 
 const LARGE_TRANSACTION_THRESHOLD = 1000;
 const MAX_TRANSACTIONS = 20;
+const MAX_TOKENS_DISPLAYED = 20; // Maximum tokens to display
+const TOKEN_INACTIVE_THRESHOLD = 300000; // 5 minutes in milliseconds
 const MAX_PRICE_HISTORY = 30; // Maximum number of price points to keep (30 minutes)
 const RECONNECT_INTERVAL = 10000; // 10 seconds between reconnection attempts
 
@@ -23,30 +25,24 @@ export const useLiveData = () => {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [largeTransactions, setLargeTransactions] = React.useState<TokenTransaction[]>([]);
   
-  // References to store WebSocket connections
   const pythWsRef = React.useRef<WebSocketConnection | null>(null);
   const pumpWsRef = React.useRef<WebSocketConnection | null>(null);
   
-  // Store tokens in a more accessible format for updates
   const tokensMapRef = React.useRef<Map<string, TokenData>>(new Map());
   
-  // Initialize WebSocket connections
   React.useEffect(() => {
-    // Initialize Pyth WebSocket for SOL price
     pythWsRef.current = new WebSocketConnection(
       PYTH_WS,
       {
         onOpen: () => {
           setPythStatus('connected');
           
-          // Subscribe to SOL/USD price feed
           pythWsRef.current?.send({
             type: "subscribe",
             ids: [SOL_FEED_ID]
           });
         },
         onMessage: (data) => {
-          // Process price updates from Pyth
           if (data?.type === "price_update") {
             const p = data.price_feed.price;
             const newPrice = Number(p.price) * (10 ** Number(p.expo));
@@ -54,7 +50,6 @@ export const useLiveData = () => {
             setPrevSolPrice(solPrice);
             setSolPrice(newPrice);
             
-            // Add to price history with the isIncrease flag
             setSolPriceHistory(prev => {
               const isIncrease = prev.length > 0 ? newPrice > prev[prev.length - 1].price : true;
               const newHistory = [...prev, {
@@ -63,14 +58,12 @@ export const useLiveData = () => {
                 isIncrease
               }];
               
-              // Keep only the most recent MAX_PRICE_HISTORY data points
               if (newHistory.length > MAX_PRICE_HISTORY) {
                 return newHistory.slice(newHistory.length - MAX_PRICE_HISTORY);
               }
               return newHistory;
             });
             
-            // Update USD values for all tokens when SOL price changes
             updateTokenUsdValues(newPrice);
           }
         },
@@ -84,24 +77,20 @@ export const useLiveData = () => {
       RECONNECT_INTERVAL
     );
     
-    // Initialize PumpFun WebSocket for token data
     pumpWsRef.current = new WebSocketConnection(
       PUMP_WS,
       {
         onOpen: () => {
           setPumpStatus('connected');
           
-          // Subscribe to new token events
           pumpWsRef.current?.send({
             method: "subscribeNewToken"
           });
         },
         onMessage: (data) => {
           if (data?.txType === "create") {
-            // Handle new token creation
             const mint = data.mint;
             
-            // Create new token object
             const newToken: TokenData = {
               name: data.name,
               symbol: data.symbol,
@@ -114,9 +103,9 @@ export const useLiveData = () => {
               marketCapUsd: (data.marketCapSol || 0) * (solPrice || 0),
               devBalance: data.initialBuy || 0,
               devValueSol: (data.initialBuy || 0) * ((data.marketCapSol || 0) / (data.vTokensInBondingCurve || 1000000000)),
-              devValueUsd: 0, // Will be calculated
+              devValueUsd: 0,
               estTokenPriceSol: (data.marketCapSol || 0) / (data.vTokensInBondingCurve || 1000000000),
-              estTokenPriceUsd: 0, // Will be calculated
+              estTokenPriceUsd: 0,
               vTokensInBondingCurve: data.vTokensInBondingCurve || 1000000000,
               prevMarketCapSol: null,
               prevMarketCapUsd: null,
@@ -129,31 +118,25 @@ export const useLiveData = () => {
               lastUpdate: Date.now()
             };
             
-            // Calculate USD values
             if (solPrice) {
               newToken.marketCapUsd = newToken.marketCapSol * solPrice;
               newToken.devValueUsd = newToken.devValueSol * solPrice;
               newToken.estTokenPriceUsd = newToken.estTokenPriceSol * solPrice;
             }
             
-            // Add to tokens map
             tokensMapRef.current.set(mint, newToken);
             
-            // Update tokens state
             setTokens(Array.from(tokensMapRef.current.values()));
             
-            // Subscribe to this token's trades
             pumpWsRef.current?.send({
               method: "subscribeTokenTrade",
               keys: [mint]
             });
           } else if (data?.txType === "buy" || data?.txType === "sell") {
-            // Handle token trades
             const mint = data.mint;
             const token = tokensMapRef.current.get(mint);
             
             if (token) {
-              // Store previous values for trend indicators
               const updatedToken: TokenData = {
                 ...token,
                 prevMarketCapSol: token.marketCapSol,
@@ -163,36 +146,29 @@ export const useLiveData = () => {
                 prevDevValueUsd: token.devValueUsd,
                 prevEstTokenPriceSol: token.estTokenPriceSol,
                 prevEstTokenPriceUsd: token.estTokenPriceUsd,
-                // Update with new values
                 marketCapSol: data.marketCapSol,
-                signature: data.signature, // Update to latest transaction
+                signature: data.signature,
                 lastUpdate: Date.now()
               };
               
-              // Update dev balance if it's a developer transaction
               if (data.traderPublicKey === token.creator) {
                 updatedToken.devBalance = data.newTokenBalance;
                 updatedToken.hasDevActivity = true;
               }
               
-              // Recalculate dependent values
               updatedToken.estTokenPriceSol = updatedToken.marketCapSol / updatedToken.vTokensInBondingCurve;
               updatedToken.devValueSol = updatedToken.devBalance * updatedToken.estTokenPriceSol;
               
-              // Update USD values
               if (solPrice) {
                 updatedToken.marketCapUsd = updatedToken.marketCapSol * solPrice;
                 updatedToken.devValueUsd = updatedToken.devValueSol * solPrice;
                 updatedToken.estTokenPriceUsd = updatedToken.estTokenPriceSol * solPrice;
               }
               
-              // Update token in map
               tokensMapRef.current.set(mint, updatedToken);
               
-              // Update tokens state
               setTokens(Array.from(tokensMapRef.current.values()));
               
-              // Track large transactions
               if (solPrice && (data.solAmount * solPrice > LARGE_TRANSACTION_THRESHOLD)) {
                 const transaction: TokenTransaction = {
                   signature: data.signature,
@@ -225,19 +201,15 @@ export const useLiveData = () => {
       RECONNECT_INTERVAL
     );
     
-    // Connect to WebSockets
     pythWsRef.current.connect();
     pumpWsRef.current.connect();
     
-    // Simulate initial price history if none exists yet
-    // This will be replaced by real data as it comes in
     if (solPriceHistory.length === 0 && solPrice) {
       const initialHistory = [];
       const now = new Date();
       
       for (let i = 0; i < MAX_PRICE_HISTORY; i++) {
         const time = new Date(now.getTime() - (MAX_PRICE_HISTORY - 1 - i) * 60000);
-        // Small random variation around current price
         const variation = 0.9995 + (Math.random() * 0.001);
         const price = solPrice * variation;
         const isIncrease = i > 0 ? price > initialHistory[i-1].price : true;
@@ -252,7 +224,6 @@ export const useLiveData = () => {
       setSolPriceHistory(initialHistory);
     }
     
-    // Cleanup on unmount
     return () => {
       if (pythWsRef.current) {
         pythWsRef.current.disconnect();
@@ -261,9 +232,8 @@ export const useLiveData = () => {
         pumpWsRef.current.disconnect();
       }
     };
-  }, [solPrice, solPriceHistory.length]); // Added solPriceHistory.length as dependency
+  }, [solPrice, solPriceHistory.length]);
   
-  // Helper function to update USD values when SOL price changes
   const updateTokenUsdValues = (newSolPrice: number) => {
     if (!newSolPrice) return;
     
@@ -281,11 +251,9 @@ export const useLiveData = () => {
     setTokens(Array.from(tokensMapRef.current.values()));
   };
   
-  // Manual refresh function (will reset connections if disconnected)
   const handleRefresh = () => {
     setIsRefreshing(true);
     
-    // Reset WebSockets connections completely if disconnected
     if (pythStatus === 'disconnected' && pythWsRef.current) {
       pythWsRef.current.resetConnection();
     }
@@ -294,18 +262,15 @@ export const useLiveData = () => {
       pumpWsRef.current.resetConnection();
     }
     
-    // Force an update of token values
     if (solPrice) {
       updateTokenUsdValues(solPrice);
     }
     
-    // Simulate a brief loading state
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
   };
   
-  // Get filtered large transactions
   const getLargeTransactions = () => {
     const buyTransactions = largeTransactions.filter(tx => tx.type === 'buy');
     const sellTransactions = largeTransactions.filter(tx => tx.type === 'sell');
@@ -313,23 +278,41 @@ export const useLiveData = () => {
     return { buyTransactions, sellTransactions };
   };
   
-  // Format price history for chart display
   const getFormattedPriceHistory = () => {
     return solPriceHistory.map((item, index) => ({
       time: item.time,
       timeFormatted: item.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       price: item.price,
       increase: item.isIncrease,
-      // Add random volume data for display purposes
       volume: Math.round(100 + Math.random() * 500)
     }));
+  };
+  
+  const getFilteredTokens = (): TokenData[] => {
+    const now = Date.now();
+    const allTokens = Array.from(tokensMapRef.current.values());
+    
+    const activeTokens = allTokens.filter(token => {
+      const lastActivity = token.lastUpdate || token.timestamp;
+      return (now - lastActivity) < TOKEN_INACTIVE_THRESHOLD;
+    });
+    
+    const nonRuggedTokens = activeTokens.filter(token => {
+      if (!token.prevDevBalance || token.prevDevBalance === 0) return true;
+      if (token.devBalance < token.prevDevBalance * 0.3) return false;
+      return true;
+    });
+    
+    return nonRuggedTokens
+      .sort((a, b) => b.marketCapSol - a.marketCapSol)
+      .slice(0, MAX_TOKENS_DISPLAYED);
   };
   
   return {
     solPrice,
     prevSolPrice,
     solPriceHistory: getFormattedPriceHistory(),
-    tokens,
+    tokens: getFilteredTokens(),
     pythStatus,
     pumpStatus,
     isRefreshing,

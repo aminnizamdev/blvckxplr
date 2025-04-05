@@ -40,6 +40,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Roboto', sans-serif;
+    padding-bottom: 250px; /* Add padding to account for fixed footer */
   }
 }
 
@@ -152,6 +153,10 @@
 @media (max-width: 768px) {
   .token-grid {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  
+  body {
+    padding-bottom: 320px; /* Increase padding for mobile footer */
   }
 }
 

@@ -1,11 +1,40 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Activity, ExternalLink, Github, Heart, Twitter } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const AppFooter = () => {
+  const [opacity, setOpacity] = useState(1);
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      
+      if (scrollTop + windowHeight >= documentHeight - 10) {
+        setOpacity(1);
+      } 
+      else if (scrollTop > 100) {
+        setOpacity(0.5);
+      } 
+      else {
+        setOpacity(1);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+  
   return (
-    <footer className="bg-background border-t border-border/50 py-8 mt-12">
+    <footer 
+      className="bg-background border-t border-border/50 py-8 fixed bottom-0 left-0 right-0 z-10 transition-opacity duration-200"
+      style={{ opacity }}
+    >
       <div className="container mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-4">

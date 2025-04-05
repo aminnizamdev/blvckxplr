@@ -1,3 +1,4 @@
+
 import React from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import TokenCard from '@/components/TokenCard';
@@ -7,7 +8,6 @@ import { useLiveData } from '@/hooks/useLiveData';
 import { TokenData } from '@/types/token';
 import SolPriceDisplay from '@/components/SolPriceDisplay';
 import { Toaster } from '@/components/ui/toaster';
-import { format } from 'date-fns';
 import AppHeader from '@/components/AppHeader';
 import AppFooter from '@/components/AppFooter';
 import SolanaPricePanel from '@/components/SolanaPricePanel';
@@ -47,7 +47,7 @@ const Index = () => {
 
   const handleSort = (sortOption: string) => {
     setSortBy(sortOption);
-    // Toast removed
+    // Toast notification removed
   };
 
   const filteredTokens = React.useMemo(() => {
@@ -82,8 +82,6 @@ const Index = () => {
         return [...filteredTokens].sort((a, b) => b.marketCapSol - a.marketCapSol);
     }
   }, [filteredTokens, sortBy]);
-
-  // Removed useEffect with toast notification
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -129,11 +127,11 @@ const Index = () => {
             onSort={handleSort}
           />
           
-          <div className="dashboard-section">
+          <div className="dashboard-section mb-32"> {/* Add bottom margin for fixed footer */}
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Live Tokens</h2>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Showing {sortedTokens.length} tokens</span>
+                <span>Showing {sortedTokens.length} tokens (max {20})</span>
               </div>
             </div>
             
@@ -170,7 +168,6 @@ const Index = () => {
         onClose={() => setDetailsOpen(false)}
       />
       
-      {/* Keep the Toaster component but it won't show any pop-ups */}
       <Toaster />
     </div>
   );
