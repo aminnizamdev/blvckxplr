@@ -32,3 +32,17 @@ export interface TokenData {
   hasDevActivity: boolean;
   lastUpdate: number;
 }
+
+export interface TokenTransaction {
+  signature: string;
+  tokenMint: string;
+  tokenName: string;
+  tokenSymbol: string;
+  trader: string;
+  timestamp: number;
+  type: 'buy' | 'sell';
+  amountSol: number;
+  valueUsd: number;
+  isDeveloper: boolean;
+}
+

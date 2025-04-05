@@ -1,3 +1,4 @@
+
 import React from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import TokenCard from '@/components/TokenCard';
@@ -12,6 +13,7 @@ import { format } from 'date-fns';
 import AppHeader from '@/components/AppHeader';
 import AppFooter from '@/components/AppFooter';
 import SolanaPricePanel from '@/components/SolanaPricePanel';
+import TransactionMarquee from '@/components/TransactionMarquee';
 
 const Index = () => {
   const { toast } = useToast();
@@ -22,8 +24,12 @@ const Index = () => {
     pythStatus,
     pumpStatus,
     isRefreshing,
-    handleRefresh
+    handleRefresh,
+    getLargeTransactions,
+    largeTransactionThreshold
   } = useLiveData();
+  
+  const { buyTransactions, sellTransactions } = getLargeTransactions();
   
   const [selectedToken, setSelectedToken] = React.useState<TokenData | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
@@ -117,6 +123,13 @@ const Index = () => {
             previousPrice={prevSolPrice}
           />
         </div>
+        
+        {/* Transaction Marquee */}
+        <TransactionMarquee
+          buyTransactions={buyTransactions}
+          sellTransactions={sellTransactions}
+          threshold={largeTransactionThreshold}
+        />
         
         <div className="space-y-6">
           <DashboardHeader

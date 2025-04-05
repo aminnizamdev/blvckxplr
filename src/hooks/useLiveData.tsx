@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { TokenData } from '@/types/token';
+import { TokenData, TokenTransaction } from '@/types/token';
 import { 
   WebSocketConnection, 
   PUMP_WS, 
@@ -10,6 +9,9 @@ import {
 } from '@/services/WebSocketService';
 import { useToast } from '@/hooks/use-toast';
 
+const LARGE_TRANSACTION_THRESHOLD = 1000;
+const MAX_TRANSACTIONS = 20;
+
 export const useLiveData = () => {
   const { toast } = useToast();
   const [solPrice, setSolPrice] = React.useState<number | null>(null);
@@ -18,6 +20,7 @@ export const useLiveData = () => {
   const [pythStatus, setPythStatus] = React.useState<ConnectionStatus>('connecting');
   const [pumpStatus, setPumpStatus] = React.useState<ConnectionStatus>('connecting');
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [largeTransactions, setLargeTransactions] = React.useState<TokenTransaction[]>([]);
   
   // References to store WebSocket connections
   const pythWsRef = React.useRef<WebSocketConnection | null>(null);
@@ -190,6 +193,27 @@ export const useLiveData = () => {
               
               // Update tokens state
               setTokens(Array.from(tokensMapRef.current.values()));
+              
+              // Track large transactions
+              if (solPrice && (data.solAmount * solPrice > LARGE_TRANSACTION_THRESHOLD)) {
+                const transaction: TokenTransaction = {
+                  signature: data.signature,
+                  tokenMint: mint,
+                  tokenName: token.name,
+                  tokenSymbol: token.symbol,
+                  trader: data.traderPublicKey,
+                  timestamp: Date.now(),
+                  type: data.txType,
+                  amountSol: data.solAmount,
+                  valueUsd: data.solAmount * solPrice,
+                  isDeveloper: data.traderPublicKey === token.creator
+                };
+                
+                setLargeTransactions(prev => {
+                  const newTransactions = [transaction, ...prev].slice(0, MAX_TRANSACTIONS);
+                  return newTransactions;
+                });
+              }
             }
           }
         },
@@ -268,6 +292,14 @@ export const useLiveData = () => {
     }, 1000);
   };
   
+  // Get filtered large transactions
+  const getLargeTransactions = () => {
+    const buyTransactions = largeTransactions.filter(tx => tx.type === 'buy');
+    const sellTransactions = largeTransactions.filter(tx => tx.type === 'sell');
+    
+    return { buyTransactions, sellTransactions };
+  };
+  
   return {
     solPrice,
     prevSolPrice,
@@ -276,5 +308,8 @@ export const useLiveData = () => {
     pumpStatus,
     isRefreshing,
     handleRefresh,
+    largeTransactions,
+    getLargeTransactions,
+    largeTransactionThreshold: LARGE_TRANSACTION_THRESHOLD
   };
 };
