@@ -258,7 +258,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                 domain={['auto', 'auto']}
                 tick={{ fontSize: 10, fill: "#999" }}
                 width={60}
-                tickFormatter={(value) => `$${value.toFixed(2)}`}
+                tickFormatter={(value) => `$${typeof value === 'number' ? value.toFixed(2) : value}`}
                 axisLine={{ stroke: "#555" }}
                 tickLine={{ stroke: "#555" }}
               />
@@ -269,11 +269,11 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                       <div className="bg-black/80 border border-white/10 p-3 rounded-lg shadow-lg backdrop-blur-sm">
                         <p className="text-xs text-white/70 mb-1">{label}</p>
                         <p className="text-sm font-medium text-white">
-                          Price: <span className="text-cyan-400">${payload[0].value.toFixed(6)}</span>
+                          Price: <span className="text-cyan-400">${typeof payload[0].value === 'number' ? payload[0].value.toFixed(6) : payload[0].value}</span>
                         </p>
                         {payload[1] && (
                           <p className="text-xs text-white/70 mt-1">
-                            Volume: <span className="text-purple-400">${formatValue(payload[1].value, 0)}</span>
+                            Volume: <span className="text-purple-400">${formatValue(Number(payload[1].value), 0)}</span>
                           </p>
                         )}
                       </div>
@@ -309,7 +309,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                 strokeWidth={1}
                 fillOpacity={0.3}
                 fill="url(#colorVolume)"
-                yAxisId={1}
+                // Removing the yAxisId since we're not using a second YAxis
                 hide={true}
               />
               <Brush 
