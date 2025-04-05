@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TokenData, TokenTransaction } from '@/types/token';
 import { 
@@ -8,7 +7,6 @@ import {
   SOL_FEED_ID, 
   ConnectionStatus 
 } from '@/services/WebSocketService';
-import { useToast } from '@/hooks/use-toast';
 
 const LARGE_TRANSACTION_THRESHOLD = 1000;
 const MAX_TRANSACTIONS = 20;
@@ -16,7 +14,6 @@ const MAX_PRICE_HISTORY = 30; // Maximum number of price points to keep (30 minu
 const RECONNECT_INTERVAL = 10000; // 10 seconds between reconnection attempts
 
 export const useLiveData = () => {
-  const { toast } = useToast();
   const [solPrice, setSolPrice] = React.useState<number | null>(null);
   const [prevSolPrice, setPrevSolPrice] = React.useState<number | null>(null);
   const [solPriceHistory, setSolPriceHistory] = React.useState<{time: Date, price: number, isIncrease: boolean}[]>([]);
@@ -46,11 +43,6 @@ export const useLiveData = () => {
           pythWsRef.current?.send({
             type: "subscribe",
             ids: [SOL_FEED_ID]
-          });
-          
-          toast({
-            title: "Connected to Pyth",
-            description: "Receiving real-time SOL price data",
           });
         },
         onMessage: (data) => {
@@ -84,11 +76,6 @@ export const useLiveData = () => {
         },
         onClose: () => {
           setPythStatus('disconnected');
-          toast({
-            title: "Disconnected from Pyth",
-            description: "SOL price updates paused",
-            variant: "destructive",
-          });
         },
         onError: () => {
           setPythStatus('disconnected');
@@ -107,11 +94,6 @@ export const useLiveData = () => {
           // Subscribe to new token events
           pumpWsRef.current?.send({
             method: "subscribeNewToken"
-          });
-          
-          toast({
-            title: "Connected to PumpFun",
-            description: "Receiving real-time token data",
           });
         },
         onMessage: (data) => {
@@ -164,11 +146,6 @@ export const useLiveData = () => {
             pumpWsRef.current?.send({
               method: "subscribeTokenTrade",
               keys: [mint]
-            });
-            
-            toast({
-              title: "New token detected",
-              description: `${data.name} (${data.symbol}) was just created`,
             });
           } else if (data?.txType === "buy" || data?.txType === "sell") {
             // Handle token trades
@@ -240,11 +217,6 @@ export const useLiveData = () => {
         },
         onClose: () => {
           setPumpStatus('disconnected');
-          toast({
-            title: "Disconnected from PumpFun",
-            description: "Token data updates paused",
-            variant: "destructive",
-          });
         },
         onError: () => {
           setPumpStatus('disconnected');
@@ -289,7 +261,7 @@ export const useLiveData = () => {
         pumpWsRef.current.disconnect();
       }
     };
-  }, [solPrice, toast]); // Added solPrice as dependency
+  }, [solPrice, solPriceHistory.length]); // Added solPriceHistory.length as dependency
   
   // Helper function to update USD values when SOL price changes
   const updateTokenUsdValues = (newSolPrice: number) => {
@@ -330,10 +302,6 @@ export const useLiveData = () => {
     // Simulate a brief loading state
     setTimeout(() => {
       setIsRefreshing(false);
-      toast({
-        title: "Data refreshed",
-        description: `Last update: ${new Date().toLocaleTimeString()}`,
-      });
     }, 1000);
   };
   

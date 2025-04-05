@@ -1,4 +1,3 @@
-
 import React from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import TokenCard from '@/components/TokenCard';
@@ -8,7 +7,6 @@ import { useLiveData } from '@/hooks/useLiveData';
 import { TokenData } from '@/types/token';
 import SolPriceDisplay from '@/components/SolPriceDisplay';
 import { Toaster } from '@/components/ui/toaster';
-import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import AppHeader from '@/components/AppHeader';
 import AppFooter from '@/components/AppFooter';
@@ -16,7 +14,6 @@ import SolanaPricePanel from '@/components/SolanaPricePanel';
 import TransactionMarquee from '@/components/TransactionMarquee';
 
 const Index = () => {
-  const { toast } = useToast();
   const {
     solPrice,
     prevSolPrice,
@@ -50,11 +47,7 @@ const Index = () => {
 
   const handleSort = (sortOption: string) => {
     setSortBy(sortOption);
-    toast({
-      title: "Sorted tokens",
-      description: `Tokens sorted by ${sortOption}`,
-      duration: 2000,
-    });
+    // Toast removed
   };
 
   const filteredTokens = React.useMemo(() => {
@@ -90,14 +83,7 @@ const Index = () => {
     }
   }, [filteredTokens, sortBy]);
 
-  React.useEffect(() => {
-    if (isRefreshing) {
-      toast({
-        title: "Refreshing data...",
-        description: `Last update: ${format(new Date(), 'h:mm:ss a')}`,
-      });
-    }
-  }, [isRefreshing, toast]);
+  // Removed useEffect with toast notification
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -184,6 +170,7 @@ const Index = () => {
         onClose={() => setDetailsOpen(false)}
       />
       
+      {/* Keep the Toaster component but it won't show any pop-ups */}
       <Toaster />
     </div>
   );

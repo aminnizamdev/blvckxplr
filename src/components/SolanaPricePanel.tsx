@@ -40,16 +40,45 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
   
   // Calculate statistics based on the price data
   const calculateStats = () => {
-    if (!solPriceHistory.length) return { high: 0, low: 0, avg: 0, volume: 0 };
+    if (!solPriceHistory.length) return { 
+      high: 0, 
+      low: 0, 
+      avg: 0, 
+      volume: 0,
+      mean: 0,
+      median: 0,
+      stdDev: 0,
+      variance: 0
+    };
     
     const prices = solPriceHistory.map(d => d.price);
     const volumes = solPriceHistory.map(d => d.volume);
     
+    // Calculate mean
+    const mean = prices.reduce((sum, price) => sum + price, 0) / prices.length;
+    
+    // Calculate median
+    const sortedPrices = [...prices].sort((a, b) => a - b);
+    const midpoint = Math.floor(sortedPrices.length / 2);
+    const median = sortedPrices.length % 2 === 0
+      ? (sortedPrices[midpoint - 1] + sortedPrices[midpoint]) / 2
+      : sortedPrices[midpoint];
+    
+    // Calculate variance
+    const variance = prices.reduce((sum, price) => sum + Math.pow(price - mean, 2), 0) / prices.length;
+    
+    // Calculate standard deviation
+    const stdDev = Math.sqrt(variance);
+    
     return {
       high: Math.max(...prices),
       low: Math.min(...prices),
-      avg: prices.reduce((sum, price) => sum + price, 0) / prices.length,
+      avg: mean,
       volume: volumes.reduce((sum, vol) => sum + vol, 0),
+      mean,
+      median,
+      stdDev,
+      variance
     };
   };
   
@@ -93,6 +122,30 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
   };
   
   const accuracy = getDataAccuracy();
+  
+  // Calculate binomial distribution of price movements
+  const calculateBinomialDistribution = () => {
+    if (solPriceHistory.length < 2) return { upProbability: 0.5, downProbability: 0.5, upCount: 0, downCount: 0, totalMoves: 0 };
+    
+    let upCount = 0;
+    let downCount = 0;
+    
+    for (let i = 1; i < solPriceHistory.length; i++) {
+      if (solPriceHistory[i].price > solPriceHistory[i-1].price) {
+        upCount++;
+      } else if (solPriceHistory[i].price < solPriceHistory[i-1].price) {
+        downCount++;
+      }
+    }
+    
+    const totalMoves = upCount + downCount;
+    const upProbability = totalMoves > 0 ? upCount / totalMoves : 0.5;
+    const downProbability = totalMoves > 0 ? downCount / totalMoves : 0.5;
+    
+    return { upProbability, downProbability, upCount, downCount, totalMoves };
+  };
+  
+  const priceMovement = React.useMemo(() => calculateBinomialDistribution(), [solPriceHistory]);
   
   // Find the average price for the reference line
   const averagePrice = React.useMemo(() => {
@@ -176,6 +229,159 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
               Trading activity
             </span>
           </div>
+        </div>
+        
+        {/* New Statistical Analysis Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <Card className="bg-card/50 border border-border/30 glass-card">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-sm">Mean & Median</CardTitle>
+            </CardHeader>
+            <CardContent className="py-0 px-4 pb-4">
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-muted-foreground">Mean Price</span>
+                    <span className="text-sm font-medium">${stats.mean.toFixed(6)}</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-muted/30 rounded-full mt-1">
+                    <div 
+                      className="h-full bg-cyan-500 rounded-full" 
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, (stats.mean / stats.high) * 100))}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-muted-foreground">Median Price</span>
+                    <span className="text-sm font-medium">${stats.median.toFixed(6)}</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-muted/30 rounded-full mt-1">
+                    <div 
+                      className="h-full bg-purple-500 rounded-full" 
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, (stats.median / stats.high) * 100))}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground mt-2">
+                  {stats.mean > stats.median 
+                    ? "Mean > Median: Positive skew in price distribution"
+                    : stats.mean < stats.median
+                      ? "Mean < Median: Negative skew in price distribution"
+                      : "Mean = Median: Normal price distribution"
+                  }
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-card/50 border border-border/30 glass-card">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-sm">Variance & Standard Deviation</CardTitle>
+            </CardHeader>
+            <CardContent className="py-0 px-4 pb-4">
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-muted-foreground">Variance</span>
+                    <span className="text-sm font-medium">${stats.variance.toFixed(8)}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Measures squared deviations from the mean
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-muted-foreground">Standard Deviation</span>
+                    <span className="text-sm font-medium">${stats.stdDev.toFixed(8)}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Measures price volatility
+                  </div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground mt-2 flex justify-between">
+                  <span>Volatility Rating:</span>
+                  <span className={cn(
+                    stats.stdDev < 0.001 ? "text-green-500" : 
+                    stats.stdDev < 0.01 ? "text-yellow-500" : 
+                    "text-red-500"
+                  )}>
+                    {stats.stdDev < 0.001 ? "Low" : 
+                     stats.stdDev < 0.01 ? "Medium" : 
+                     "High"} 
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-card/50 border border-border/30 glass-card">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-sm">Price Movement Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="py-0 px-4 pb-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-cyan-400 flex items-center">
+                    <ArrowUpDown size={12} className="mr-1 rotate-180" />
+                    Upward Moves
+                  </span>
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium">{priceMovement.upCount}</span>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      ({(priceMovement.upProbability * 100).toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-pink-400 flex items-center">
+                    <ArrowUpDown size={12} className="mr-1" />
+                    Downward Moves
+                  </span>
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium">{priceMovement.downCount}</span>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      ({(priceMovement.downProbability * 100).toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="w-full h-2 bg-muted/30 rounded-full mt-2">
+                  <div 
+                    className="h-full bg-cyan-500 rounded-l-full" 
+                    style={{ 
+                      width: `${priceMovement.upProbability * 100}%`,
+                      float: 'left' 
+                    }}
+                  ></div>
+                  <div 
+                    className="h-full bg-pink-500 rounded-r-full" 
+                    style={{ 
+                      width: `${priceMovement.downProbability * 100}%`,
+                      float: 'right'
+                    }}
+                  ></div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground mt-2">
+                  Market Bias: {
+                    priceMovement.upProbability > 0.55 ? "Bullish" :
+                    priceMovement.downProbability > 0.55 ? "Bearish" :
+                    "Neutral"
+                  }
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         
         <div className="price-chart-container bg-black/30 p-6 rounded-lg border border-border/30 glass-card">
