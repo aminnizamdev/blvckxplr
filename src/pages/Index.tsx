@@ -26,7 +26,7 @@ const Index = () => {
   const [selectedToken, setSelectedToken] = React.useState<TokenData | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [sortBy, setSortBy] = React.useState('newest');
+  const [sortBy, setSortBy] = React.useState('marketCap'); // Default to marketCap now
 
   const handleViewDetails = (tokenId: string) => {
     const token = tokens.find(t => t.mint === tokenId);
@@ -78,8 +78,9 @@ const Index = () => {
       case 'devValue':
         return [...filteredTokens].sort((a, b) => b.devValueSol - a.devValueSol);
       case 'newest':
-      default:
         return [...filteredTokens].sort((a, b) => b.timestamp - a.timestamp);
+      default:
+        return [...filteredTokens].sort((a, b) => b.marketCapSol - a.marketCapSol);
     }
   }, [filteredTokens, sortBy]);
 

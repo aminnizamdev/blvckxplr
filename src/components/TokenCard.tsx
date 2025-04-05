@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { TokenData } from '@/types/token';
 import { useTokenDetails } from '@/hooks/useTokenDetails';
 import PriceChangeBadge from './PriceChangeBadge';
+import TokenTrendBadge from './TokenTrendBadge';
 import { formatDistanceToNow } from 'date-fns';
 
 interface TokenCardProps {
@@ -54,21 +55,24 @@ const TokenCard = ({ token, onViewDetails }: TokenCardProps) => {
               </span>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8" 
-            asChild
-          >
-            <a 
-              href={`https://www.pump.fun/token/${token.mint}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              title="View on PumpFun"
+          <div className="flex items-center gap-2">
+            <TokenTrendBadge token={token} />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8" 
+              asChild
             >
-              <ExternalLink size={16} />
-            </a>
-          </Button>
+              <a 
+                href={`https://www.pump.fun/token/${token.mint}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                title="View on PumpFun"
+              >
+                <ExternalLink size={16} />
+              </a>
+            </Button>
+          </div>
         </div>
       </CardHeader>
 

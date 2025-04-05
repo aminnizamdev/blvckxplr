@@ -56,7 +56,7 @@ const DashboardHeader = ({
       <div className="flex items-center justify-between gap-8 mb-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center">
-            PumpFun Token Tracker
+            BLVCK XPLR
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
