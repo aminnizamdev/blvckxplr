@@ -30,7 +30,7 @@ export class WebSocketConnection {
   private shouldReconnect: boolean = true;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 20; // Increased based on Python example
+  private maxReconnectAttempts: number = 30; // Increased from previous 20 for more resilience
   private baseReconnectInterval: number;
   private isClosing: boolean = false;
   private stableConnectionTimeout: NodeJS.Timeout | null = null;
@@ -39,33 +39,35 @@ export class WebSocketConnection {
   private consecutiveErrors: number = 0;
   private maxConsecutiveErrors: number = 5;
   private pingSuccess: boolean = false;
-  private backoffActivated: boolean = false;
-  private backoffResetTimeout: NodeJS.Timeout | null = null;
   // Message queue to prevent blocking the main thread
   private messageQueue: QueuedMessage[] = [];
   private isProcessingQueue: boolean = false;
   private queueProcessInterval: NodeJS.Timeout | null = null;
   // Maximum number of messages to process in one batch
-  private maxQueueProcessingBatch: number = 20; // Increased from 10 to 20
-  // Maximum queue size - increased based on Python's max_queue=None
-  private maxQueueSize: number = 500; // Much larger queue to prevent message loss
+  private maxQueueProcessingBatch: number = 30; // Increased from previous 20
+  // Maximum queue size
+  private maxQueueSize: number = 1000; // Increased queue size
   // Connection health metrics
   private connectionHealth: number = 0;
   private lastMessageReceived: number = 0;
+  private isPythConnection: boolean = false;
 
   constructor(url: string, handlers: WebSocketHandler, reconnectInterval: number = 5000) {
     this.url = url;
     this.handlers = handlers;
     this.reconnectInterval = reconnectInterval;
     this.baseReconnectInterval = reconnectInterval;
+    this.isPythConnection = url === PYTH_WS;
     
-    // Special handling for Pyth connection - match Python example parameters
-    if (url === PYTH_WS) {
-      this.maxReconnectAttempts = 20;
-      this.reconnectInterval = 5000; // Matching Python example (5s)
+    // Special handling for Pyth connection
+    if (this.isPythConnection) {
+      this.maxReconnectAttempts = 30;
+      this.reconnectInterval = 5000;
       this.baseReconnectInterval = 5000;
-      this.maxQueueSize = 1000; // Even larger queue for Pyth
+      this.maxQueueSize = 1500; // Even larger queue for Pyth
     }
+    
+    console.log(`WebSocket initialized for ${url} with reconnect interval ${reconnectInterval}ms`);
   }
 
   public connect(): void {
@@ -82,15 +84,15 @@ export class WebSocketConnection {
       console.log(`Attempting to connect to ${this.url}`);
       this.ws = new WebSocket(this.url);
 
-      // Connection timeout aligned with Python example
+      // Connection timeout - longer for Pyth
       const connectionTimeout = setTimeout(() => {
         if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
-          console.log(`Connection attempt to ${this.url} timed out after ${this.url === PYTH_WS ? '10' : '8'} seconds`);
+          console.log(`Connection attempt to ${this.url} timed out after ${this.isPythConnection ? '15' : '10'} seconds`);
           this.ws.close();
           this.isConnecting = false;
           this.reconnect();
         }
-      }, this.url === PYTH_WS ? 10000 : 8000); // 10s timeout for Pyth (similar to Python)
+      }, this.isPythConnection ? 15000 : 10000); // Increased timeouts
 
       this.ws.onopen = () => {
         clearTimeout(connectionTimeout);
@@ -100,22 +102,15 @@ export class WebSocketConnection {
         this.connectionHealth = 100; // Full health on successful connection
         console.log(`Connected to ${this.url}`);
         
-        // For Pyth connection, use a longer stability check
-        const stabilityDelay = 1000; // Consistent 1s delay
+        // Allow a short delay for connection to stabilize
+        const stabilityDelay = this.isPythConnection ? 1500 : 1000;
         
         if (this.stableConnectionTimeout) {
           clearTimeout(this.stableConnectionTimeout);
         }
         
         this.stableConnectionTimeout = setTimeout(() => {
-          // For Pyth, use a more robust heartbeat mechanism
-          if (this.url === PYTH_WS) {
-            this.startPythHeartbeat();
-          } else {
-            this.startHeartbeat();
-          }
-          
-          // Start queue processing
+          this.startHeartbeat();
           this.startQueueProcessing();
           
           // Only trigger onOpen if we haven't immediately closed
@@ -133,20 +128,8 @@ export class WebSocketConnection {
           this.pingSuccess = true;
           this.connectionHealth = Math.min(100, this.connectionHealth + 5); // Improve health on message
           
-          // For Pyth connections, reset the consecutive errors counter on successful message
-          if (this.url === PYTH_WS) {
-            this.consecutiveErrors = 0;
-            this.backoffActivated = false;
-            
-            // Reset the backoff after a successful period of stability
-            if (this.backoffResetTimeout) {
-              clearTimeout(this.backoffResetTimeout);
-            }
-            
-            this.backoffResetTimeout = setTimeout(() => {
-              this.reconnectAttempts = 0;
-            }, 60000); // Reset reconnect attempts counter after 1 minute of stability
-          }
+          // Reset error counters on successful message
+          this.consecutiveErrors = 0;
           
           // Try to parse as JSON, but don't fail if it's not JSON
           let data;
@@ -180,11 +163,7 @@ export class WebSocketConnection {
         this.isClosing = true;
         this.isConnecting = false;
         
-        if (this.url === PYTH_WS) {
-          this.stopPythHeartbeat();
-        } else {
-          this.stopHeartbeat();
-        }
+        this.stopHeartbeat();
         
         if (this.stableConnectionTimeout) {
           clearTimeout(this.stableConnectionTimeout);
@@ -196,12 +175,6 @@ export class WebSocketConnection {
         console.log(`Disconnected from ${this.url} with code: ${event.code}, reason: ${event.reason || 'No reason provided'}`);
         this.connectionHealth = 0; // Zero health on disconnect
         this.handlers.onClose?.();
-        
-        // Special handling for Pyth connection
-        if (this.url === PYTH_WS && event.code !== 1000) {
-          // If we're receiving frequent close events, activate backoff
-          this.backoffActivated = true;
-        }
         
         // Only attempt to reconnect if not a clean close (code 1000)
         // and the client isn't deliberately disconnecting
@@ -216,11 +189,6 @@ export class WebSocketConnection {
         
         this.consecutiveErrors++;
         this.connectionHealth = Math.max(0, this.connectionHealth - 25); // Big health decrease on error
-        
-        // Special handling for Pyth connection errors
-        if (this.url === PYTH_WS) {
-          this.backoffActivated = true;
-        }
         
         if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
           console.log(`Too many consecutive errors (${this.consecutiveErrors}), resetting connection`);
@@ -259,11 +227,11 @@ export class WebSocketConnection {
     this.stopQueueProcessing();
     
     // Process the queue at regular intervals - faster for Pyth
-    const interval = this.url === PYTH_WS ? 25 : 50;
+    const interval = this.isPythConnection ? 25 : 50;
     
     this.queueProcessInterval = setInterval(() => {
       this.processQueue();
-    }, interval); // Process queue faster for Pyth
+    }, interval);
   }
   
   private stopQueueProcessing(): void {
@@ -281,7 +249,7 @@ export class WebSocketConnection {
     this.isProcessingQueue = true;
     
     try {
-      // Process a batch of messages - dynamic batch size based on queue length
+      // Dynamic batch size based on queue length
       const batchSize = Math.min(
         this.messageQueue.length,
         Math.max(5, Math.min(this.maxQueueProcessingBatch, Math.ceil(this.messageQueue.length / 5)))
@@ -301,22 +269,23 @@ export class WebSocketConnection {
     }
   }
 
-  // Special heartbeat for Pyth network - updated to match Python example
-  private startPythHeartbeat(): void {
-    this.stopPythHeartbeat(); // Clear any existing interval
+  private startHeartbeat(): void {
+    this.stopHeartbeat(); // Clear any existing interval
     
     this.lastPongTime = Date.now(); // Reset pong time
     
-    // Send ping every 20 seconds (matching Python ping_interval=20)
+    // Send ping every 20 seconds for Pyth, 30 seconds for others
+    const pingInterval = this.isPythConnection ? 20000 : 30000; 
+    
     this.pingInterval = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
         try {
           // Check if too much time has passed since last pong
           const now = Date.now();
           const elapsed = now - this.lastPongTime;
+          const timeoutLimit = this.isPythConnection ? 30000 : 45000;
           
-          // 30s timeout (3x Python's ping_timeout=10)
-          if (elapsed > 30000) {
+          if (elapsed > timeoutLimit) {
             console.log(`No response for ${elapsed/1000}s from ${this.url}, reconnecting...`);
             this.resetConnection();
             return;
@@ -325,10 +294,12 @@ export class WebSocketConnection {
           // Adjust connection health based on time since last message
           this.connectionHealth = Math.max(0, this.connectionHealth - Math.floor(elapsed / 5000));
           
-          // Send Pyth-specific ping format
-          this.ws.send(JSON.stringify({
-            type: "heartbeat"
-          }));
+          // Send the appropriate ping format
+          if (this.isPythConnection) {
+            this.ws.send(JSON.stringify({ type: "heartbeat" }));
+          } else {
+            this.ws.send(JSON.stringify({ type: "ping" }));
+          }
           
           console.log(`Sent heartbeat to ${this.url}`);
           
@@ -339,7 +310,7 @@ export class WebSocketConnection {
               this.resetConnection();
             }
             this.pingSuccess = false; // Reset for next ping
-          }, 10000); // 10 seconds timeout (similar to Python's ping_timeout=10)
+          }, this.isPythConnection ? 10000 : 15000);
           
         } catch (error) {
           console.error(`Error sending heartbeat to ${this.url}:`, error);
@@ -349,60 +320,7 @@ export class WebSocketConnection {
         console.log(`Cannot send heartbeat to ${this.url} - WebSocket is not open`);
         this.resetConnection();
       }
-    }, 20000); // 20 second interval (matching Python's ping_interval=20)
-  }
-
-  private stopPythHeartbeat(): void {
-    if (this.pingInterval) {
-      clearInterval(this.pingInterval);
-      this.pingInterval = null;
-    }
-  }
-
-  private startHeartbeat(): void {
-    this.stopHeartbeat(); // Clear any existing interval
-    
-    this.lastPongTime = Date.now(); // Reset pong time
-    
-    // Send ping every 20 seconds (matching Python example)
-    this.pingInterval = setInterval(() => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        try {
-          // Check if too much time has passed since last pong
-          const now = Date.now();
-          const elapsed = now - this.lastPongTime;
-          
-          if (elapsed > 30000) { // 30 seconds timeout
-            console.log(`No response for ${elapsed/1000}s from ${this.url}, reconnecting...`);
-            this.resetConnection();
-            return;
-          }
-          
-          // Adjust connection health based on time since last message
-          this.connectionHealth = Math.max(0, this.connectionHealth - Math.floor(elapsed / 5000));
-          
-          // Send ping - using a simple empty message that's compatible with most WebSocket servers
-          this.ws.send('{"type":"ping"}');
-          console.log(`Sent ping to ${this.url}`);
-          
-          // Check connection stability after sending ping
-          setTimeout(() => {
-            if (!this.pingSuccess) {
-              console.log(`Ping to ${this.url} did not get a response, reconnecting...`);
-              this.resetConnection();
-            }
-            this.pingSuccess = false; // Reset for next ping
-          }, 5000); // Wait 5 seconds for response
-          
-        } catch (error) {
-          console.error(`Error sending ping to ${this.url}:`, error);
-          this.resetConnection();
-        }
-      } else {
-        console.log(`Cannot send ping to ${this.url} - WebSocket is not open`);
-        this.resetConnection();
-      }
-    }, 20000); // 20 second interval (matching Python)
+    }, pingInterval);
   }
 
   private stopHeartbeat(): void {
@@ -445,21 +363,18 @@ export class WebSocketConnection {
       clearTimeout(this.reconnectTimeout);
     }
     
-    // Specialized backoff matching Python example's approach
-    let delay;
-    if (this.url === PYTH_WS && this.backoffActivated) {
-      // More aggressive exponential backoff for problematic Pyth connections
-      delay = Math.min(
-        this.baseReconnectInterval * Math.pow(1.5, this.reconnectAttempts), // Reduced power
-        30000 // Maximum 30 second delay
-      );
-    } else {
-      // Regular exponential backoff for other connections
-      delay = Math.min(
-        this.baseReconnectInterval * Math.pow(1.2, this.reconnectAttempts),
-        20000 // Maximum 20 second delay (faster reconnects)
-      );
-    }
+    // Improved exponential backoff with jitter
+    const baseFactor = this.isPythConnection ? 1.5 : 1.3;
+    const baseDelay = this.baseReconnectInterval;
+    const exponentialPart = Math.pow(baseFactor, Math.min(this.reconnectAttempts, 10));
+    const maxDelay = this.isPythConnection ? 30000 : 20000;
+    
+    // Calculate delay with exponential backoff
+    let delay = Math.min(baseDelay * exponentialPart, maxDelay);
+    
+    // Add jitter (± 15%) to prevent reconnection storms
+    const jitter = 0.3 * delay * (Math.random() - 0.5);
+    delay = Math.max(1000, Math.floor(delay + jitter));
     
     this.reconnectAttempts++;
     
@@ -481,18 +396,9 @@ export class WebSocketConnection {
       clearTimeout(this.stableConnectionTimeout);
     }
     
-    if (this.backoffResetTimeout) {
-      clearTimeout(this.backoffResetTimeout);
-    }
-    
     // Stop message queue processing
     this.stopQueueProcessing();
-    
-    if (this.url === PYTH_WS) {
-      this.stopPythHeartbeat();
-    } else {
-      this.stopHeartbeat();
-    }
+    this.stopHeartbeat();
     
     if (this.ws) {
       // Use a proper close code for clean disconnection
@@ -510,15 +416,14 @@ export class WebSocketConnection {
     console.log(`Resetting connection to ${this.url}`);
     this.disconnect();
     this.shouldReconnect = true;
-    // Improved reset strategy:
-    // - For Pyth with backoff, increment attempts but don't fully reset
-    // - For others, reset attempts completely
-    if (this.url !== PYTH_WS || !this.backoffActivated) {
-      this.reconnectAttempts = 0;
-    } else if (this.reconnectAttempts > 5) {
-      // If we've had many failures, only reduce the count rather than reset completely
+    
+    // Improved reset strategy that's gentler with reconnection attempts
+    if (this.reconnectAttempts > 5) {
       this.reconnectAttempts = Math.floor(this.reconnectAttempts / 2);
+    } else {
+      this.reconnectAttempts = 0;
     }
+    
     this.consecutiveErrors = 0;
     setTimeout(() => {
       this.connect();
@@ -540,11 +445,10 @@ export class WebSocketConnection {
   // Enhanced connection health check - returns a score from 0-100
   public getConnectionHealth(): number {
     if (!this.isOpen()) return 0;
-    
     return Math.round(this.connectionHealth);
   }
   
-  // New method to check time since last message
+  // Check time since last message
   public getLastMessageAge(): number {
     return Date.now() - this.lastMessageReceived;
   }

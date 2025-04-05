@@ -50,7 +50,7 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
     }
   }, [price]);
   
-  // Calculate update frequency
+  // Calculate update frequency and check staleness
   const [updateFrequency, setUpdateFrequency] = React.useState<number | null>(null);
   React.useEffect(() => {
     const freqInterval = setInterval(() => {
@@ -58,16 +58,16 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
       const secondsElapsed = (now.getTime() - lastUpdateTime.getTime()) / 1000;
       
       // Set connection quality based on update frequency
-      if (secondsElapsed > 5) {
+      if (secondsElapsed > 10) {
         setConnectionQuality('poor');
+        setStaleWarningVisible(true);
+      } else if (secondsElapsed > 5) {
+        setConnectionQuality('unstable');
+        setStaleWarningVisible(true);
       } else if (secondsElapsed > 2) {
         setConnectionQuality('unstable');
       } else {
         setConnectionQuality('good');
-      }
-      
-      if (secondsElapsed > 3) {
-        setStaleWarningVisible(true);
       }
     }, 1000);
     
@@ -89,8 +89,8 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
   const isDataPotentiallyStale = React.useMemo(() => {
     const now = new Date();
     const timeDifference = now.getTime() - lastUpdateTime.getTime();
-    // Consider data stale if no update in 3 seconds (longer than refresh rate)
-    return timeDifference > 3000; 
+    // Consider data stale if no update in 5 seconds (longer than refresh rate)
+    return timeDifference > 5000; 
   }, [lastUpdateTime]);
 
   // Connection quality indicator
@@ -98,9 +98,9 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
     if (connectionQuality === 'good') {
       return <Wifi size={16} className="text-green-500" />;
     } else if (connectionQuality === 'unstable') {
-      return <Wifi size={16} className="text-yellow-500" />;
+      return <Wifi size={16} className="text-yellow-500 animate-pulse" />;
     } else {
-      return <WifiOff size={16} className="text-red-500" />;
+      return <WifiOff size={16} className="text-red-500 animate-pulse" />;
     }
   };
 
