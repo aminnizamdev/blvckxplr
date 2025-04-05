@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Activity, ExternalLink, Github, Heart, Twitter } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -5,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 const AppFooter = () => {
   return (
     <footer 
-      className="bg-background border-t border-border/50 py-8 w-full z-10"
+      className="bg-background border-t border-border/50 py-8"
     >
       <div className="container mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
