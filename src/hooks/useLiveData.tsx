@@ -11,12 +11,13 @@ import { useToast } from '@/hooks/use-toast';
 
 const LARGE_TRANSACTION_THRESHOLD = 1000;
 const MAX_TRANSACTIONS = 20;
+const MAX_PRICE_HISTORY = 30; // Maximum number of price points to keep (30 minutes)
 
 export const useLiveData = () => {
   const { toast } = useToast();
   const [solPrice, setSolPrice] = React.useState<number | null>(null);
   const [prevSolPrice, setPrevSolPrice] = React.useState<number | null>(null);
-  const [solPriceHistory, setSolPriceHistory] = React.useState<{time: Date, price: number}[]>([]);
+  const [solPriceHistory, setSolPriceHistory] = React.useState<{time: Date, price: number, isIncrease: boolean}[]>([]);
   const [tokens, setTokens] = React.useState<TokenData[]>([]);
   const [pythStatus, setPythStatus] = React.useState<ConnectionStatus>('connecting');
   const [pumpStatus, setPumpStatus] = React.useState<ConnectionStatus>('connecting');
@@ -59,12 +60,18 @@ export const useLiveData = () => {
             setPrevSolPrice(solPrice);
             setSolPrice(newPrice);
             
-            // Add to price history
+            // Add to price history with the isIncrease flag
             setSolPriceHistory(prev => {
-              const newHistory = [...prev, {time: new Date(), price: newPrice}];
-              // Keep last 30 minutes (30 data points at 1 minute intervals)
-              if (newHistory.length > 30) {
-                return newHistory.slice(newHistory.length - 30);
+              const isIncrease = prev.length > 0 ? newPrice > prev[prev.length - 1].price : true;
+              const newHistory = [...prev, {
+                time: new Date(), 
+                price: newPrice,
+                isIncrease
+              }];
+              
+              // Keep only the most recent MAX_PRICE_HISTORY data points
+              if (newHistory.length > MAX_PRICE_HISTORY) {
+                return newHistory.slice(newHistory.length - MAX_PRICE_HISTORY);
               }
               return newHistory;
             });
@@ -246,6 +253,29 @@ export const useLiveData = () => {
     pythWsRef.current.connect();
     pumpWsRef.current.connect();
     
+    // Simulate initial price history if none exists yet
+    // This will be replaced by real data as it comes in
+    if (solPriceHistory.length === 0 && solPrice) {
+      const initialHistory = [];
+      const now = new Date();
+      
+      for (let i = 0; i < MAX_PRICE_HISTORY; i++) {
+        const time = new Date(now.getTime() - (MAX_PRICE_HISTORY - 1 - i) * 60000);
+        // Small random variation around current price
+        const variation = 0.9995 + (Math.random() * 0.001);
+        const price = solPrice * variation;
+        const isIncrease = i > 0 ? price > initialHistory[i-1].price : true;
+        
+        initialHistory.push({
+          time,
+          price,
+          isIncrease
+        });
+      }
+      
+      setSolPriceHistory(initialHistory);
+    }
+    
     // Cleanup on unmount
     return () => {
       if (pythWsRef.current) {
@@ -255,7 +285,7 @@ export const useLiveData = () => {
         pumpWsRef.current.disconnect();
       }
     };
-  }, [toast]); // Dependency array
+  }, [solPrice, toast]); // Added solPrice as dependency
   
   // Helper function to update USD values when SOL price changes
   const updateTokenUsdValues = (newSolPrice: number) => {
@@ -311,10 +341,22 @@ export const useLiveData = () => {
     return { buyTransactions, sellTransactions };
   };
   
+  // Format price history for chart display
+  const getFormattedPriceHistory = () => {
+    return solPriceHistory.map((item, index) => ({
+      time: item.time,
+      timeFormatted: item.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      price: item.price,
+      increase: item.isIncrease,
+      // Add random volume data for display purposes
+      volume: Math.round(100 + Math.random() * 500)
+    }));
+  };
+  
   return {
     solPrice,
     prevSolPrice,
-    solPriceHistory,
+    solPriceHistory: getFormattedPriceHistory(),
     tokens,
     pythStatus,
     pumpStatus,
