@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 const AppFooter = () => {
   return (
     <footer 
-      className="bg-background border-t border-border/50 py-8"
+      className="bg-background border-t border-border/50 py-8 fixed bottom-0 left-0 w-full z-10"
     >
       <div className="container mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
