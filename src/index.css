@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
 @tailwind base;
@@ -43,17 +44,6 @@
     padding-bottom: 250px; /* Add padding to account for fixed footer */
     position: relative;
   }
-}
-
-/* Matrix background effect */
-.matrix-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  z-index: -10;
-  pointer-events: none;
 }
 
 /* Content overlay with proper contrast */
@@ -166,14 +156,6 @@
 /* Glass card effect */
 .glass-card {
   @apply bg-black/60 backdrop-blur-sm border border-white/10;
-}
-
-/* Matrix-influenced glass effect */
-.matrix-glass {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* Responsive adjustments */

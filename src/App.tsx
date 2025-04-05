@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import React from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import MatrixRain from "./components/MatrixRain";
 
 // Create the QueryClient outside the component
 // This ensures it's not recreated on every render
@@ -17,7 +16,6 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <MatrixRain />
         <Toaster />
         <Sonner />
         <BrowserRouter>
