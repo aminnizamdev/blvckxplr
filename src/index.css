@@ -66,7 +66,7 @@
 }
 
 @keyframes highlight-red {
-  0% { background-color: rgba(239, 68, 68, 0.2); }
+  0% { background-color: rgba(236, 72, 153, 0.2); }
   100% { background-color: transparent; }
 }
 
@@ -161,7 +161,7 @@
 }
 
 .trend-down {
-  @apply text-red-500;
+  @apply text-pink-500;
 }
 
 .trend-neutral {
@@ -181,4 +181,9 @@
 /* Hover effects */
 .hover-highlight {
   @apply transition-colors duration-200 hover:bg-white/5;
+}
+
+/* Text Gradient */
+.text-gradient-primary {
+  @apply bg-gradient-to-r from-white via-cyan-300 to-white bg-clip-text text-transparent;
 }

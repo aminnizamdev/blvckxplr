@@ -168,7 +168,7 @@ const TokenCard = ({ token, onViewDetails }: TokenCardProps) => {
         <Button 
           variant="default" 
           size="sm" 
-          className="w-full group"
+          className="w-full group bg-cyan-800 hover:bg-cyan-700 text-white"
           onClick={() => onViewDetails(token.mint)}
         >
           <Info size={16} className="mr-1" />

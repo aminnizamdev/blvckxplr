@@ -17,21 +17,22 @@ export const TokenTrendBadge = ({ token, className }: TokenTrendBadgeProps) => {
     const hasPrice = token.estTokenPriceUsd > 0;
     const hasPrevPrice = token.prevEstTokenPriceUsd !== null && token.prevEstTokenPriceUsd > 0;
     
-    // Market cap over certain threshold could indicate "trending"
-    if (token.marketCapUsd > 1000) {
-      return 'trending';
-    }
-    
     // Price increased significantly
     if (hasPrevPrice && token.estTokenPriceUsd > token.prevEstTokenPriceUsd) {
       const priceChange = ((token.estTokenPriceUsd - token.prevEstTokenPriceUsd) / token.prevEstTokenPriceUsd);
-      if (priceChange > 0.2) { // 20% price increase
-        return 'hot';
-      }
       
       if (priceChange > 0.5) { // 50% price increase - extremely hot
         return 'popular';
       }
+      
+      if (priceChange > 0.2) { // 20% price increase
+        return 'hot';
+      }
+    }
+    
+    // Market cap over certain threshold could indicate "trending"
+    if (token.marketCapUsd > 1000 && (!token.prevMarketCapUsd || token.marketCapUsd > token.prevMarketCapUsd * 1.1)) {
+      return 'trending';
     }
     
     // Price has high volatility

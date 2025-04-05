@@ -10,6 +10,9 @@ import SolPriceDisplay from '@/components/SolPriceDisplay';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import AppHeader from '@/components/AppHeader';
+import AppFooter from '@/components/AppFooter';
+import SolanaPricePanel from '@/components/SolanaPricePanel';
 
 const Index = () => {
   const { toast } = useToast();
@@ -95,8 +98,23 @@ const Index = () => {
   }, [isRefreshing, toast]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-6 max-w-7xl">
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppHeader />
+      
+      <div className="container mx-auto py-6 px-4 md:px-8 max-w-7xl flex-grow">
+        <section className="mb-8">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Solana Token Analytics</h1>
+            <p className="text-muted-foreground mb-2">
+              Industrial-grade monitoring platform for tracking newly created tokens on the Solana blockchain.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Our platform provides real-time analytics, detailed market cap information, and developer wallet analysis
+              to help traders make informed decisions with high data integrity and confidence.
+            </p>
+          </div>
+        </section>
+        
         <div className="space-y-6">
           {/* Dashboard Header */}
           <DashboardHeader
@@ -110,48 +128,63 @@ const Index = () => {
             onSort={handleSort}
           />
           
-          {/* Mobile SOL Price (only visible on mobile) */}
-          <div className="md:hidden p-4 bg-card rounded-lg border border-border/50">
-            <div className="text-sm text-muted-foreground mb-1">Current SOL Price</div>
-            <SolPriceDisplay 
-              price={solPrice} 
-              previousPrice={prevSolPrice} 
-            />
-          </div>
-          
-          {/* Token Grid */}
-          <div className="dashboard-section">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Live Tokens</h2>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Showing {sortedTokens.length} tokens</span>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-3">
+              {/* Token Grid */}
+              <div className="dashboard-section">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Live Tokens</h2>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Showing {sortedTokens.length} tokens</span>
+                  </div>
+                </div>
+                
+                {sortedTokens.length > 0 ? (
+                  <div className="token-grid">
+                    {sortedTokens.map((token) => (
+                      <TokenCard
+                        key={token.mint}
+                        token={token}
+                        onViewDetails={handleViewDetails}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState 
+                    message={searchTerm ? "No matching tokens found" : "No tokens found"}
+                    subMessage={searchTerm 
+                      ? "Try a different search term or clear your filter" 
+                      : "Waiting for new tokens to be created on PumpFun..."}
+                    isLoading={isRefreshing}
+                    buttonText={isRefreshing ? "Refreshing..." : "Refresh Connections"}
+                    onAction={handleRefresh}
+                  />
+                )}
               </div>
             </div>
             
-            {sortedTokens.length > 0 ? (
-              <div className="token-grid">
-                {sortedTokens.map((token) => (
-                  <TokenCard
-                    key={token.mint}
-                    token={token}
-                    onViewDetails={handleViewDetails}
-                  />
-                ))}
+            {/* SOL Price Panel - Right Side */}
+            <div className="flex flex-col gap-4">
+              {/* Mobile SOL Price (only visible on mobile) */}
+              <div className="md:hidden p-4 bg-card rounded-lg border border-border/50 enhanced-card">
+                <div className="text-sm text-muted-foreground mb-1">Current SOL Price</div>
+                <SolPriceDisplay 
+                  price={solPrice} 
+                  previousPrice={prevSolPrice} 
+                />
               </div>
-            ) : (
-              <EmptyState 
-                message={searchTerm ? "No matching tokens found" : "No tokens found"}
-                subMessage={searchTerm 
-                  ? "Try a different search term or clear your filter" 
-                  : "Waiting for new tokens to be created on PumpFun..."}
-                isLoading={isRefreshing}
-                buttonText={isRefreshing ? "Refreshing..." : "Refresh Connections"}
-                onAction={handleRefresh}
+              
+              {/* Solana Price Panel - Always visible */}
+              <SolanaPricePanel 
+                currentPrice={solPrice}
+                previousPrice={prevSolPrice}
               />
-            )}
+            </div>
           </div>
         </div>
       </div>
+      
+      <AppFooter />
       
       {/* Token Details Modal */}
       <TokenDetailsModal

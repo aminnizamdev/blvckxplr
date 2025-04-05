@@ -2,6 +2,7 @@
 import React from 'react';
 import { ArrowDown, ArrowUp, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface SolPriceDisplayProps {
   price: number | null;
@@ -21,6 +22,19 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
     };
   }, [price, previousPrice]);
 
+  // Calculate confidence level based on price stability
+  const getConfidenceLevel = () => {
+    if (!price || !previousPrice) return null;
+    
+    const percentChange = Math.abs(((price - previousPrice) / previousPrice) * 100);
+    
+    if (percentChange < 0.1) return { level: 'High', color: 'bg-green-500' };
+    if (percentChange < 0.5) return { level: 'Medium', color: 'bg-yellow-500' };
+    return { level: 'Low', color: 'bg-red-500' };
+  };
+  
+  const confidence = getConfidenceLevel();
+
   if (!price) {
     return (
       <div className="flex items-center gap-2 animate-pulse">
@@ -38,12 +52,12 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
         "font-bold tracking-tight flex items-center gap-2",
         isLarge ? "text-3xl" : "text-2xl"
       )}>
-        <span>${price.toFixed(2)}</span>
+        <span>${price.toFixed(6)}</span>
         {priceChange && (
           <span className={cn(
             "flex items-center text-sm",
             priceChange.isPositive ? "text-cyan-500" : 
-            priceChange.isNeutral ? "text-muted-foreground" : "text-red-500"
+            priceChange.isNeutral ? "text-muted-foreground" : "text-pink-500"
           )}>
             {priceChange.isPositive ? (
               <ArrowUp size={16} />
@@ -52,8 +66,13 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
             ) : (
               <ArrowDown size={16} />
             )}
-            {Math.abs(priceChange.value).toFixed(2)}%
+            {Math.abs(priceChange.value).toFixed(4)}%
           </span>
+        )}
+        {confidence && (
+          <Badge className={cn("ml-2 text-xs", confidence.color)}>
+            {confidence.level} Confidence
+          </Badge>
         )}
       </div>
       <div className={cn(
