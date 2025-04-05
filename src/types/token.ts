@@ -7,6 +7,7 @@ export interface TokenData {
   signature: string;
   creator: string;
   timestamp: number;
+  createdAt: string;
   
   // Current values
   marketCapSol: number;
@@ -16,6 +17,7 @@ export interface TokenData {
   devValueUsd: number;
   estTokenPriceSol: number;
   estTokenPriceUsd: number;
+  vTokensInBondingCurve: number;
   
   // Previous values for trends
   prevMarketCapSol: number | null;
@@ -25,4 +27,8 @@ export interface TokenData {
   prevDevValueUsd: number | null;
   prevEstTokenPriceSol: number | null;
   prevEstTokenPriceUsd: number | null;
+  
+  // Status indicators
+  hasDevActivity: boolean;
+  lastUpdate: number;
 }

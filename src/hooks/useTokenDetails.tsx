@@ -45,10 +45,33 @@ export const useTokenDetails = () => {
     return `${address.substring(0, start)}...${address.substring(address.length - end)}`;
   };
 
+  const formatCurrency = (value: number, currency: string = 'USD', decimals: number = 2) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }).format(value);
+  };
+
+  const formatNumberCompact = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      compactDisplay: 'short'
+    }).format(value);
+  };
+
+  const formatTimestamp = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString();
+  };
+
   return {
     formatValue,
     getTrendIcon,
     getPercentChange,
     truncateAddress,
+    formatCurrency,
+    formatNumberCompact,
+    formatTimestamp
   };
 };

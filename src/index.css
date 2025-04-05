@@ -1,50 +1,86 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Base colors */
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-    --card: 224 71% 4%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-    --popover: 224 71% 4%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 262 83% 58%;
+    --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 223 47% 11%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 220 70% 50%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-    --destructive: 0 63% 31%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 215 28% 17%;
-    --input: 217 33% 17%;
-    --ring: 263 70% 50%;
-
-    /* Status colors */
-    --success: 142 70% 45%;
-    --success-foreground: 210 40% 98%;
-
-    --warning: 38 92% 50%;
-    --warning-foreground: 224 71% 4%;
-
-    --error: 0 84% 60%;
-    --error-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
 
     --radius: 0.5rem;
+    
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+    
+    --error: 0 84.2% 60.2%;
+    --error-foreground: 210 40% 98%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+    
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    
+    --warning: 48 96% 89%;
+    --warning-foreground: 38 92% 50%;
+    
+    --error: 0 62.8% 30.6%;
+    --error-foreground: 210 40% 98%;
   }
 }
 
@@ -52,90 +88,95 @@
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
   }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-secondary/50 rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-primary/50 rounded-full transition-colors;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary/80;
-  }
 }
 
-@layer components {
+@layer utilities {
   .token-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1rem;
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
   }
-
-  .token-card {
-    @apply relative overflow-hidden bg-gradient-to-br from-card to-card/80 p-4 rounded-lg border border-border/50 backdrop-blur-sm transition-all duration-300;
-  }
-
-  .token-card:hover {
-    @apply border-primary/50 shadow-lg shadow-primary/10;
-  }
-
-  .dashboard-section {
-    @apply space-y-4 p-4;
-  }
-
+  
   .dashboard-header {
-    @apply relative overflow-hidden bg-gradient-to-r from-secondary/60 to-muted/60 rounded-lg p-4 flex items-center justify-between border border-border/40 backdrop-blur-sm;
+    @apply flex flex-col gap-4;
   }
-
+  
+  .dashboard-section {
+    @apply bg-card rounded-lg border border-border/50 p-4 md:p-6;
+  }
+  
   .data-label {
-    @apply text-sm text-muted-foreground;
+    @apply text-xs text-muted-foreground mb-1;
   }
-
+  
   .data-value {
-    @apply text-lg font-medium;
+    @apply text-sm font-medium;
   }
-
+  
   .trend-up {
-    @apply text-success transition-colors duration-300;
+    @apply text-green-500;
   }
-
+  
   .trend-down {
-    @apply text-error transition-colors duration-300;
+    @apply text-red-500;
   }
-
+  
   .trend-neutral {
-    @apply text-muted-foreground transition-colors duration-300;
+    @apply text-muted-foreground;
   }
-
-  .connection-status {
-    @apply flex items-center gap-2 text-sm px-3 py-1 rounded-full;
-  }
-
+  
   .status-dot {
-    @apply w-2 h-2 rounded-full;
+    @apply h-2 w-2 rounded-full mr-2;
   }
-
+  
   .status-connected {
-    @apply bg-success animate-pulse-glow;
+    @apply bg-green-500;
   }
-
+  
   .status-disconnected {
-    @apply bg-error;
+    @apply bg-red-500;
   }
-
+  
   .status-connecting {
-    @apply bg-warning animate-pulse-glow;
+    @apply bg-yellow-500 animate-pulse;
+  }
+  
+  .connection-status {
+    @apply flex items-center text-xs;
+  }
+  
+  .token-card {
+    @apply transition-all duration-300 hover:shadow-md hover:-translate-y-1;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulseGlow {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+    }
+    50% {
+      opacity: 0.8;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
   }
 }

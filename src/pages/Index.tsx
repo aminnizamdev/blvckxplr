@@ -7,8 +7,12 @@ import TokenDetailsModal from '@/components/TokenDetailsModal';
 import { useMockData } from '@/hooks/useMockData';
 import { TokenData } from '@/types/token';
 import SolPriceDisplay from '@/components/SolPriceDisplay';
+import { Toaster } from '@/components/ui/toaster';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 const Index = () => {
+  const { toast } = useToast();
   const {
     solPrice,
     prevSolPrice,
@@ -21,6 +25,8 @@ const Index = () => {
   
   const [selectedToken, setSelectedToken] = React.useState<TokenData | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [sortBy, setSortBy] = React.useState('newest');
 
   const handleViewDetails = (tokenId: string) => {
     const token = tokens.find(t => t.mint === tokenId);
@@ -29,6 +35,63 @@ const Index = () => {
       setDetailsOpen(true);
     }
   };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  const handleSort = (sortOption: string) => {
+    setSortBy(sortOption);
+    toast({
+      title: "Sorted tokens",
+      description: `Tokens sorted by ${sortOption}`,
+      duration: 2000,
+    });
+  };
+
+  // Filter tokens based on search term
+  const filteredTokens = React.useMemo(() => {
+    if (!searchTerm) return tokens;
+    
+    const term = searchTerm.toLowerCase();
+    return tokens.filter(token => 
+      token.name.toLowerCase().includes(term) || 
+      token.symbol.toLowerCase().includes(term) || 
+      token.mint.toLowerCase().includes(term) ||
+      token.creator.toLowerCase().includes(term)
+    );
+  }, [tokens, searchTerm]);
+
+  // Sort tokens based on sort option
+  const sortedTokens = React.useMemo(() => {
+    switch (sortBy) {
+      case 'marketCap':
+        return [...filteredTokens].sort((a, b) => b.marketCapSol - a.marketCapSol);
+      case 'priceChange':
+        return [...filteredTokens].sort((a, b) => {
+          const aChange = a.prevEstTokenPriceUsd ? 
+            ((a.estTokenPriceUsd - a.prevEstTokenPriceUsd) / a.prevEstTokenPriceUsd) : 0;
+          const bChange = b.prevEstTokenPriceUsd ? 
+            ((b.estTokenPriceUsd - b.prevEstTokenPriceUsd) / b.prevEstTokenPriceUsd) : 0;
+          return bChange - aChange;
+        });
+      case 'devValue':
+        return [...filteredTokens].sort((a, b) => b.devValueSol - a.devValueSol);
+      case 'newest':
+      default:
+        return [...filteredTokens].sort((a, b) => b.timestamp - a.timestamp);
+    }
+  }, [filteredTokens, sortBy]);
+
+  // Update refresh toast
+  React.useEffect(() => {
+    if (isRefreshing) {
+      toast({
+        title: "Refreshing data...",
+        description: `Last update: ${format(new Date(), 'h:mm:ss a')}`,
+      });
+    }
+  }, [isRefreshing, toast]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,6 +105,8 @@ const Index = () => {
             pythStatus={pythStatus}
             onRefresh={handleRefresh}
             isRefreshing={isRefreshing}
+            onSearch={handleSearch}
+            onSort={handleSort}
           />
           
           {/* Mobile SOL Price (only visible on mobile) */}
@@ -58,13 +123,13 @@ const Index = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Recent Tokens</h2>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Showing {tokens.length} tokens</span>
+                <span>Showing {sortedTokens.length} tokens</span>
               </div>
             </div>
             
-            {tokens.length > 0 ? (
+            {sortedTokens.length > 0 ? (
               <div className="token-grid">
-                {tokens.map((token) => (
+                {sortedTokens.map((token) => (
                   <TokenCard
                     key={token.mint}
                     token={token}
@@ -74,8 +139,13 @@ const Index = () => {
               </div>
             ) : (
               <EmptyState 
-                message="No tokens found"
-                subMessage="Waiting for new tokens to be created on PumpFun..."
+                message={searchTerm ? "No matching tokens found" : "No tokens found"}
+                subMessage={searchTerm 
+                  ? "Try a different search term or clear your filter" 
+                  : "Waiting for new tokens to be created on PumpFun..."}
+                isLoading={isRefreshing}
+                buttonText={isRefreshing ? "Refreshing..." : "Refresh Data"}
+                onAction={handleRefresh}
               />
             )}
           </div>
@@ -88,6 +158,8 @@ const Index = () => {
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
       />
+      
+      <Toaster />
     </div>
   );
 };
