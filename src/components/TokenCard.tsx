@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ExternalLink, Wallet, Clock } from 'lucide-react';
+import { ExternalLink, Wallet, Clock, Info, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { TokenData } from '@/types/token';
@@ -18,9 +18,9 @@ const TokenCard = ({ token, onViewDetails }: TokenCardProps) => {
   const { formatValue, truncateAddress } = useTokenDetails();
   
   return (
-    <Card className="token-card animate-fade-in border-border/50 relative overflow-hidden">
+    <Card className="token-card animate-fade-in border-border/50 relative overflow-hidden enhanced-card">
       {/* Created Age Badge */}
-      <div className="absolute top-0 right-0 bg-primary/10 text-xs px-2 py-1 rounded-bl-lg flex items-center gap-1">
+      <div className="absolute top-0 right-0 bg-secondary/60 text-xs px-2 py-1 rounded-bl-lg flex items-center gap-1">
         <Clock size={12} />
         {formatDistanceToNow(new Date(token.timestamp), { addSuffix: true })}
       </div>
@@ -60,7 +60,7 @@ const TokenCard = ({ token, onViewDetails }: TokenCardProps) => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-8 w-8" 
+              className="h-8 w-8 text-foreground/70 hover:text-cyan-400 transition-colors" 
               asChild
             >
               <a 
@@ -77,7 +77,7 @@ const TokenCard = ({ token, onViewDetails }: TokenCardProps) => {
       </CardHeader>
 
       <CardContent className="py-2 space-y-3">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+        <div className="data-grid">
           <div>
             <div className="data-label">Market Cap</div>
             <div className="data-value flex flex-col">
@@ -126,7 +126,7 @@ const TokenCard = ({ token, onViewDetails }: TokenCardProps) => {
               href={`https://solscan.io/account/${token.creator}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs text-primary/80 hover:text-primary transition-colors"
+              className="flex items-center gap-1 text-xs text-cyan-400/80 hover:text-cyan-400 transition-colors"
             >
               <Wallet size={10} />
               {truncateAddress(token.creator, 6, 6)}
@@ -146,7 +146,7 @@ const TokenCard = ({ token, onViewDetails }: TokenCardProps) => {
 
         <div className="pt-2 border-t border-border/50">
           <div className="data-label flex justify-between">
-            <span>Est. Token Price</span>
+            <span>Token Price</span>
             <PriceChangeBadge 
               currentValue={token.estTokenPriceUsd} 
               previousValue={token.prevEstTokenPriceUsd}
@@ -168,10 +168,11 @@ const TokenCard = ({ token, onViewDetails }: TokenCardProps) => {
         <Button 
           variant="default" 
           size="sm" 
-          className="w-full"
+          className="w-full group"
           onClick={() => onViewDetails(token.mint)}
         >
-          View Details
+          <Info size={16} className="mr-1" />
+          <span>View Details</span>
         </Button>
       </CardFooter>
     </Card>

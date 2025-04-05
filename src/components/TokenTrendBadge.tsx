@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { Flame, TrendingUp, ArrowUpDown, BarChart2, AlertTriangle } from 'lucide-react';
+import { Flame, TrendingUp, ArrowUpDown, BarChart2, AlertTriangle, Zap, AreaChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TokenData } from '@/types/token';
 
-type TrendType = 'trending' | 'hot' | 'stable' | 'volume' | 'rugged';
+type TrendType = 'trending' | 'hot' | 'stable' | 'volume' | 'rugged' | 'popular' | 'volatile';
 
 interface TokenTrendBadgeProps {
   token: TokenData;
@@ -27,6 +27,18 @@ export const TokenTrendBadge = ({ token, className }: TokenTrendBadgeProps) => {
       const priceChange = ((token.estTokenPriceUsd - token.prevEstTokenPriceUsd) / token.prevEstTokenPriceUsd);
       if (priceChange > 0.2) { // 20% price increase
         return 'hot';
+      }
+      
+      if (priceChange > 0.5) { // 50% price increase - extremely hot
+        return 'popular';
+      }
+    }
+    
+    // Price has high volatility
+    if (hasPrevPrice) {
+      const priceChange = Math.abs((token.estTokenPriceUsd - token.prevEstTokenPriceUsd) / token.prevEstTokenPriceUsd);
+      if (priceChange > 0.3) { // 30% change in either direction
+        return 'volatile';
       }
     }
     
@@ -66,6 +78,20 @@ export const TokenTrendBadge = ({ token, className }: TokenTrendBadgeProps) => {
           <div className={cn("token-tag token-tag-hot flex items-center gap-1", className)}>
             <Flame size={12} />
             <span>Hot</span>
+          </div>
+        );
+      case 'popular':
+        return (
+          <div className={cn("token-tag token-tag-hot flex items-center gap-1", className)}>
+            <Zap size={12} />
+            <span>Popular</span>
+          </div>
+        );
+      case 'volatile':
+        return (
+          <div className={cn("token-tag token-tag-volume flex items-center gap-1", className)}>
+            <AreaChart size={12} />
+            <span>Volatile</span>
           </div>
         );
       case 'stable':

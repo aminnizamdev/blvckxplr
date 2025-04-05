@@ -42,7 +42,7 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
         {priceChange && (
           <span className={cn(
             "flex items-center text-sm",
-            priceChange.isPositive ? "text-green-500" : 
+            priceChange.isPositive ? "text-cyan-500" : 
             priceChange.isNeutral ? "text-muted-foreground" : "text-red-500"
           )}>
             {priceChange.isPositive ? (

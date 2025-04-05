@@ -34,7 +34,7 @@ const PriceChangeBadge = ({
   return (
     <span className={cn(
       "inline-flex items-center text-xs font-medium",
-      isPositive ? "text-green-500" : isNeutral ? "text-muted-foreground" : "text-red-500",
+      isPositive ? "text-cyan-500" : isNeutral ? "text-muted-foreground" : "text-red-500",
       className
     )}>
       {isPositive ? (

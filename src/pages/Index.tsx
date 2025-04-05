@@ -26,7 +26,7 @@ const Index = () => {
   const [selectedToken, setSelectedToken] = React.useState<TokenData | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [sortBy, setSortBy] = React.useState('marketCap'); // Default to marketCap now
+  const [sortBy, setSortBy] = React.useState('marketCap'); // Default to marketCap
 
   const handleViewDetails = (tokenId: string) => {
     const token = tokens.find(t => t.mint === tokenId);
