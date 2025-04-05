@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { ArrowDown, ArrowUp, ArrowRight } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SolPriceDisplayProps {
   price: number | null;
@@ -36,11 +37,13 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
 
   // Add timestamp for last update tracking
   const [lastUpdateTime, setLastUpdateTime] = React.useState<Date>(new Date());
+  const [staleWarningVisible, setStaleWarningVisible] = React.useState<boolean>(false);
   
   // Update timestamp whenever price updates
   React.useEffect(() => {
     if (price) {
       setLastUpdateTime(new Date());
+      setStaleWarningVisible(false);
     }
   }, [price]);
   
@@ -51,6 +54,21 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
     // Consider data stale if no update in 5 seconds (much longer than refresh rate)
     return timeDifference > 5000; 
   }, [lastUpdateTime]);
+  
+  // Show warning tooltip after a delay if data is stale
+  React.useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    
+    if (isDataPotentiallyStale && !staleWarningVisible) {
+      timeout = setTimeout(() => {
+        setStaleWarningVisible(true);
+      }, 2000);
+    }
+    
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [isDataPotentiallyStale, staleWarningVisible]);
 
   if (!price || isDataPotentiallyStale) {
     return (
@@ -59,6 +77,20 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
           "bg-muted rounded-md",
           isLarge ? "h-10 w-32" : "h-8 w-24"
         )}></div>
+        {isDataPotentiallyStale && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-amber-500">
+                  <AlertCircle size={16} className="animate-pulse" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Data may be stale. Last update: {lastUpdateTime.toLocaleTimeString()}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
     );
   }
@@ -96,7 +128,7 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
         "text-muted-foreground",
         isLarge ? "text-sm" : "text-xs"
       )}>
-        SOL/USD • Updated {lastUpdateTime.toLocaleTimeString()}
+        SOL/USD • Updated {lastUpdateTime.toLocaleTimeString()} • Refreshing every 400ms
       </div>
     </div>
   );

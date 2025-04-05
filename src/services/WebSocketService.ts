@@ -1,4 +1,3 @@
-
 // WebSocket connection constants
 export const PUMP_WS = "wss://pumpportal.fun/api/data";
 export const PYTH_WS = "wss://hermes.pyth.network/ws";
@@ -13,6 +12,12 @@ export interface WebSocketHandler {
   onMessage?: (data: any) => void;
   onClose?: () => void;
   onError?: (error: Event) => void;
+}
+
+// Message queue for buffering websocket messages
+interface QueuedMessage {
+  data: any;
+  timestamp: number;
 }
 
 // WebSocket connection class
@@ -37,6 +42,14 @@ export class WebSocketConnection {
   // Add backoff tracking for specific error types
   private backoffActivated: boolean = false;
   private backoffResetTimeout: NodeJS.Timeout | null = null;
+  // Message queue to prevent blocking the main thread
+  private messageQueue: QueuedMessage[] = [];
+  private isProcessingQueue: boolean = false;
+  private queueProcessInterval: NodeJS.Timeout | null = null;
+  // Maximum number of messages to process in one batch
+  private maxQueueProcessingBatch: number = 10; 
+  // Maximum queue size
+  private maxQueueSize: number = 100;
 
   constructor(url: string, handlers: WebSocketHandler, reconnectInterval: number = 5000) {
     this.url = url;
@@ -97,6 +110,9 @@ export class WebSocketConnection {
             this.startHeartbeat();
           }
           
+          // Start queue processing
+          this.startQueueProcessing();
+          
           // Only trigger onOpen if we haven't immediately closed
           if (this.ws?.readyState === WebSocket.OPEN) {
             this.handlers.onOpen?.();
@@ -134,7 +150,8 @@ export class WebSocketConnection {
             data = event.data;
           }
           
-          this.handlers.onMessage?.(data);
+          // Queue the message instead of processing immediately
+          this.queueMessage(data);
         } catch (error) {
           console.error(`Failed to process WebSocket message from ${this.url}:`, error);
           this.consecutiveErrors++;
@@ -164,6 +181,9 @@ export class WebSocketConnection {
         if (this.stableConnectionTimeout) {
           clearTimeout(this.stableConnectionTimeout);
         }
+        
+        // Stop queue processing
+        this.stopQueueProcessing();
         
         console.log(`Disconnected from ${this.url} with code: ${event.code}, reason: ${event.reason || 'No reason provided'}`);
         this.handlers.onClose?.();
@@ -208,6 +228,62 @@ export class WebSocketConnection {
     }
   }
 
+  private queueMessage(data: any): void {
+    // Add the message to the queue with a timestamp
+    this.messageQueue.push({
+      data,
+      timestamp: Date.now()
+    });
+    
+    // If queue gets too large, remove oldest messages
+    if (this.messageQueue.length > this.maxQueueSize) {
+      // Keep only most recent messages
+      this.messageQueue = this.messageQueue.slice(-this.maxQueueSize);
+      console.warn(`Message queue for ${this.url} exceeded size limit. Trimmed to ${this.maxQueueSize} most recent messages.`);
+    }
+  }
+  
+  private startQueueProcessing(): void {
+    // Clear any existing interval
+    this.stopQueueProcessing();
+    
+    // Process the queue at regular intervals
+    this.queueProcessInterval = setInterval(() => {
+      this.processQueue();
+    }, 50); // Process queue every 50ms
+  }
+  
+  private stopQueueProcessing(): void {
+    if (this.queueProcessInterval) {
+      clearInterval(this.queueProcessInterval);
+      this.queueProcessInterval = null;
+    }
+    this.isProcessingQueue = false;
+  }
+  
+  private processQueue(): void {
+    // If already processing or no messages, skip
+    if (this.isProcessingQueue || this.messageQueue.length === 0) return;
+    
+    this.isProcessingQueue = true;
+    
+    try {
+      // Process a batch of messages
+      const messagesToProcess = Math.min(this.messageQueue.length, this.maxQueueProcessingBatch);
+      
+      for (let i = 0; i < messagesToProcess; i++) {
+        const message = this.messageQueue.shift();
+        if (message) {
+          this.handlers.onMessage?.(message.data);
+        }
+      }
+    } catch (error) {
+      console.error(`Error processing message queue for ${this.url}:`, error);
+    } finally {
+      this.isProcessingQueue = false;
+    }
+  }
+
   // Special heartbeat for Pyth network
   private startPythHeartbeat(): void {
     this.stopPythHeartbeat(); // Clear any existing interval
@@ -220,7 +296,7 @@ export class WebSocketConnection {
         try {
           // Check if too much time has passed since last pong
           const now = Date.now();
-          if (now - this.lastPongTime > 60000) { // 60 seconds timeout for Pyth
+          if (now - this.lastPongTime > 45000) { // Reduced from 60s to 45s for faster detection
             console.log(`No response for ${(now - this.lastPongTime) / 1000}s from ${this.url}, reconnecting...`);
             this.resetConnection();
             return;
@@ -345,8 +421,8 @@ export class WebSocketConnection {
     if (this.url === PYTH_WS && this.backoffActivated) {
       // More aggressive exponential backoff for problematic Pyth connections
       delay = Math.min(
-        this.baseReconnectInterval * Math.pow(2, this.reconnectAttempts),
-        60000 // Maximum 1 minute delay for Pyth
+        this.baseReconnectInterval * Math.pow(1.8, this.reconnectAttempts), // Reduced power from 2 to 1.8
+        45000 // Reduced maximum delay from 60s to 45s
       );
     } else {
       // Regular exponential backoff for other connections
@@ -380,6 +456,9 @@ export class WebSocketConnection {
       clearTimeout(this.backoffResetTimeout);
     }
     
+    // Stop message queue processing
+    this.stopQueueProcessing();
+    
     if (this.url === PYTH_WS) {
       this.stopPythHeartbeat();
     } else {
@@ -402,9 +481,14 @@ export class WebSocketConnection {
     console.log(`Resetting connection to ${this.url}`);
     this.disconnect();
     this.shouldReconnect = true;
-    // Only reset attempts for non-Pyth or if backoff isn't activated
+    // Improved reset strategy:
+    // - For Pyth with backoff, increment attempts but don't fully reset
+    // - For others, reset attempts completely
     if (this.url !== PYTH_WS || !this.backoffActivated) {
       this.reconnectAttempts = 0;
+    } else if (this.reconnectAttempts > 5) {
+      // If we've had many failures, only reduce the count rather than reset completely
+      this.reconnectAttempts = Math.floor(this.reconnectAttempts / 2);
     }
     this.consecutiveErrors = 0;
     setTimeout(() => {
@@ -414,5 +498,31 @@ export class WebSocketConnection {
 
   public isOpen(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
+  }
+  
+  // Get number of queued messages - useful for debugging
+  public getQueueStatus(): {length: number, processing: boolean} {
+    return {
+      length: this.messageQueue.length,
+      processing: this.isProcessingQueue
+    };
+  }
+  
+  // Check connection health - returns a score from 0-100
+  public getConnectionHealth(): number {
+    if (!this.isOpen()) return 0;
+    
+    // Calculate health based on various factors
+    const now = Date.now();
+    const timeSinceLastPong = now - this.lastPongTime;
+    const pongFactor = Math.max(0, 100 - (timeSinceLastPong / 450)); // Decreases as time since last pong increases
+    
+    const reconnectFactor = Math.max(0, 100 - (this.reconnectAttempts * 20)); // Decreases with more reconnect attempts
+    const errorFactor = Math.max(0, 100 - (this.consecutiveErrors * 33)); // Decreases with more errors
+    
+    // Combine factors with weights
+    const health = (pongFactor * 0.5) + (reconnectFactor * 0.3) + (errorFactor * 0.2);
+    
+    return Math.round(Math.max(0, Math.min(100, health)));
   }
 }
