@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ArrowDown, ArrowUp, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,7 +21,6 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
     };
   }, [price, previousPrice]);
 
-  // Calculate confidence level based on price stability
   const getConfidenceLevel = () => {
     if (!price || !previousPrice) return null;
     
