@@ -4,9 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import React from "react"; // Explicitly import React
+import React from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import MatrixRain from "./components/MatrixRain";
 
 // Create the QueryClient outside the component
 // This ensures it's not recreated on every render
@@ -16,6 +17,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <MatrixRain />
         <Toaster />
         <Sonner />
         <BrowserRouter>
