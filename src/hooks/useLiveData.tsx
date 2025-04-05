@@ -16,6 +16,7 @@ export const useLiveData = () => {
   const { toast } = useToast();
   const [solPrice, setSolPrice] = React.useState<number | null>(null);
   const [prevSolPrice, setPrevSolPrice] = React.useState<number | null>(null);
+  const [solPriceHistory, setSolPriceHistory] = React.useState<{time: Date, price: number}[]>([]);
   const [tokens, setTokens] = React.useState<TokenData[]>([]);
   const [pythStatus, setPythStatus] = React.useState<ConnectionStatus>('connecting');
   const [pumpStatus, setPumpStatus] = React.useState<ConnectionStatus>('connecting');
@@ -57,6 +58,16 @@ export const useLiveData = () => {
             
             setPrevSolPrice(solPrice);
             setSolPrice(newPrice);
+            
+            // Add to price history
+            setSolPriceHistory(prev => {
+              const newHistory = [...prev, {time: new Date(), price: newPrice}];
+              // Keep last 30 minutes (30 data points at 1 minute intervals)
+              if (newHistory.length > 30) {
+                return newHistory.slice(newHistory.length - 30);
+              }
+              return newHistory;
+            });
             
             // Update USD values for all tokens when SOL price changes
             updateTokenUsdValues(newPrice);
@@ -244,7 +255,7 @@ export const useLiveData = () => {
         pumpWsRef.current.disconnect();
       }
     };
-  }, [toast]); // Empty dependency array to run only once on mount
+  }, [toast]); // Dependency array
   
   // Helper function to update USD values when SOL price changes
   const updateTokenUsdValues = (newSolPrice: number) => {
@@ -303,6 +314,7 @@ export const useLiveData = () => {
   return {
     solPrice,
     prevSolPrice,
+    solPriceHistory,
     tokens,
     pythStatus,
     pumpStatus,

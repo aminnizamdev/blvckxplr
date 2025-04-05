@@ -37,42 +37,50 @@ interface SolanaPricePanelProps {
 
 const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps) => {
   const { formatValue } = useTokenDetails();
+  const [priceData, setPriceData] = React.useState<any[]>([]);
   
-  // Generate mock historical data
-  const generateMockData = () => {
-    if (!currentPrice) return [];
+  // Generate price data based on the current SOL price
+  // This will be replaced with real data from Pyth WebSocket
+  React.useEffect(() => {
+    if (!currentPrice) return;
     
+    // Create price data for the last few minutes
+    // In a real-world scenario, this would come from the Pyth WebSocket
     const now = new Date();
-    return Array.from({ length: 24 }, (_, i) => {
-      const time = new Date(now.getTime() - (23 - i) * 3600000);
-      // Create some variation in the price
-      const randomFactor = 0.98 + Math.random() * 0.04; // Random between 0.98 and 1.02
-      const basePrice = currentPrice * (0.95 + (i/24) * 0.1); // Gradual trend upward
-      const hourLabel = time.getHours() < 10 ? `0${time.getHours()}:00` : `${time.getHours()}:00`;
-      
-      // Calculate price change for this hour (for bar coloring)
-      const prevHourIndex = i > 0 ? i - 1 : 0;
-      const prevBasePrice = i > 0 ? currentPrice * (0.95 + (prevHourIndex/24) * 0.1) : basePrice;
-      const isIncrease = basePrice > prevBasePrice;
-      
-      return {
-        time: hourLabel,
-        price: basePrice * randomFactor,
-        volume: Math.round(1000 + Math.random() * 5000),
-        timestamp: time.toISOString(),
-        increase: isIncrease,
-      };
-    });
-  };
-  
-  const mockData = React.useMemo(() => generateMockData(), [currentPrice]);
-  
-  // Calculate daily statistics
-  const calculateStats = () => {
-    if (!mockData.length) return { high: 0, low: 0, avg: 0, volume: 0 };
+    const minuteData = [];
     
-    const prices = mockData.map(d => d.price);
-    const volumes = mockData.map(d => d.volume);
+    for (let i = 0; i < 30; i++) {
+      const time = new Date(now.getTime() - (29 - i) * 60000); // Last 30 minutes, 1 minute intervals
+      
+      // Use small variations around the current price to simulate real-time data
+      // In production, this would be replaced by actual data points from Pyth
+      const variationFactor = 0.9995 + (Math.random() * 0.001); // Tiny variations
+      const price = currentPrice * variationFactor;
+      
+      // For volume, use random values (would be replaced by real data)
+      const volume = Math.round(100 + Math.random() * 500);
+      
+      // Determine if this price is an increase from the previous one
+      const isIncrease = i > 0 ? price > minuteData[i - 1]?.price : true;
+      
+      minuteData.push({
+        time: time,
+        timeFormatted: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        price: price,
+        volume: volume,
+        increase: isIncrease
+      });
+    }
+    
+    setPriceData(minuteData);
+  }, [currentPrice]);
+  
+  // Calculate statistics based on the price data
+  const calculateStats = () => {
+    if (!priceData.length) return { high: 0, low: 0, avg: 0, volume: 0 };
+    
+    const prices = priceData.map(d => d.price);
+    const volumes = priceData.map(d => d.volume);
     
     return {
       high: Math.max(...prices),
@@ -82,7 +90,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
     };
   };
   
-  const stats = React.useMemo(() => calculateStats(), [mockData]);
+  const stats = React.useMemo(() => calculateStats(), [priceData]);
   
   // Calculate price change percentage
   const getPriceChange = () => {
@@ -115,7 +123,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
     // In a real-world scenario, this would come from the data source
     return {
       sourceLatency: Math.floor(Math.random() * 150), // ms
-      dataPoints: 24,
+      dataPoints: priceData.length,
       updateFrequency: '1 minute',
       reliabilityScore: 95 + Math.floor(Math.random() * 5), // 95-99%
     };
@@ -125,10 +133,10 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
   
   // Find the average price for the reference line
   const averagePrice = React.useMemo(() => {
-    if (!mockData.length) return 0;
-    const sum = mockData.reduce((total, item) => total + item.price, 0);
-    return sum / mockData.length;
-  }, [mockData]);
+    if (!priceData.length) return 0;
+    const sum = priceData.reduce((total, item) => total + item.price, 0);
+    return sum / priceData.length;
+  }, [priceData]);
   
   if (!currentPrice) {
     return (
@@ -170,7 +178,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div className="flex flex-col items-center justify-center p-3 bg-card/50 rounded-lg border border-border/30 glass-card">
             <span className="text-xs text-muted-foreground mb-1">Current Price</span>
-            <span className="text-2xl font-bold">${currentPrice.toFixed(6)}</span>
+            <span className="text-2xl font-bold">${typeof currentPrice === 'number' ? currentPrice.toFixed(6) : '-'}</span>
             <span className={cn(
               "text-sm flex items-center gap-1",
               priceChange.isPositive ? "text-cyan-500" : "text-pink-500"
@@ -180,7 +188,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
           </div>
           
           <div className="flex flex-col items-center justify-center p-3 bg-card/50 rounded-lg border border-border/30 glass-card">
-            <span className="text-xs text-muted-foreground mb-1">24h High</span>
+            <span className="text-xs text-muted-foreground mb-1">30m High</span>
             <span className="text-2xl font-bold">${stats.high.toFixed(6)}</span>
             <span className="text-sm text-muted-foreground">
               <TrendingUp size={12} className="inline mr-1 text-cyan-500" />
@@ -189,7 +197,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
           </div>
           
           <div className="flex flex-col items-center justify-center p-3 bg-card/50 rounded-lg border border-border/30 glass-card">
-            <span className="text-xs text-muted-foreground mb-1">24h Low</span>
+            <span className="text-xs text-muted-foreground mb-1">30m Low</span>
             <span className="text-2xl font-bold">${stats.low.toFixed(6)}</span>
             <span className="text-sm text-muted-foreground">
               <TrendingUp size={12} className="inline mr-1 text-pink-500 transform rotate-180" />
@@ -198,7 +206,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
           </div>
           
           <div className="flex flex-col items-center justify-center p-3 bg-card/50 rounded-lg border border-border/30 glass-card">
-            <span className="text-xs text-muted-foreground mb-1">24h Volume</span>
+            <span className="text-xs text-muted-foreground mb-1">Volume</span>
             <span className="text-2xl font-bold">${formatValue(stats.volume, 0)}</span>
             <span className="text-sm text-muted-foreground">
               <BarChart4 size={12} className="inline mr-1" />
@@ -210,7 +218,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
         <div className="price-chart-container bg-black/30 p-6 rounded-lg border border-border/30 glass-card">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <span className="text-sm font-medium text-gradient-primary text-lg">SOL/USD Price Histogram (24h)</span>
+              <span className="text-sm font-medium text-gradient-primary text-lg">SOL/USD Histogram (Last 30 minutes)</span>
               <div className="text-xs text-muted-foreground mt-1">
                 Data reliability: {accuracy.reliabilityScore}% • Refresh rate: {accuracy.updateFrequency}
               </div>
@@ -246,14 +254,19 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
             }}
             className="pb-4"
           >
-            <BarChart data={mockData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+            <BarChart 
+              data={priceData} 
+              margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+              barGap={0} // Makes bars touch each other
+              barCategoryGap={1} // Minimal space between groups
+            >
               <CartesianGrid stroke="#555" strokeDasharray="5 5" opacity={0.1} />
               <XAxis 
-                dataKey="time"
+                dataKey="timeFormatted"
                 tick={{ fontSize: 10, fill: "#999" }}
-                tickFormatter={(value) => value}
                 axisLine={{ stroke: "#555" }}
                 tickLine={{ stroke: "#555" }}
+                interval="preserveStartEnd"
               />
               <YAxis 
                 domain={['auto', 'auto']}
@@ -277,6 +290,11 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                         <p className="text-xs text-white/70 mt-1">
                           Volume: <span className="text-purple-400">${formatValue(Number(payload[0]?.payload?.volume || 0), 0)}</span>
                         </p>
+                        <p className="text-xs text-white/70 mt-1">
+                          Time: <span className="text-gray-300">
+                            {new Date(payload[0]?.payload?.time).toLocaleTimeString()}
+                          </span>
+                        </p>
                       </div>
                     );
                   }
@@ -294,12 +312,11 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                   fontSize: 10 
                 }} 
               />
-              {/* Use conditional rendering to show different colored bars based on price movement */}
               <Bar 
                 dataKey="price" 
                 name="Price"
-                radius={[4, 4, 0, 0]}
-                barSize={15}
+                radius={[2, 2, 0, 0]}
+                barSize={8} // Make bars narrower and closer together
                 shape={(props: any) => {
                   const { fill, x, y, width, height } = props;
                   const isIncrease = props.payload.increase;
@@ -312,19 +329,18 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                       height={height}
                       fill={isIncrease ? "#06b6d4" : "#ec4899"}
                       stroke="none"
-                      rx={4}
-                      ry={4}
+                      rx={2}
+                      ry={2}
                     />
                   );
                 }}
               />
               <Brush 
-                dataKey="time" 
+                dataKey="timeFormatted" 
                 height={30} 
                 stroke="#555"
                 fill="rgba(0,0,0,0.2)"
-                tickFormatter={(value) => value}
-                startIndex={12}
+                startIndex={Math.max(0, priceData.length - 15)} // Show last 15 minutes by default
               />
             </BarChart>
           </ChartContainer>
@@ -393,7 +409,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                   <BarChart4 size={12} className="text-muted-foreground" />
                   Data Points
                 </span>
-                <span className="text-xs">{accuracy.dataPoints} points/24h</span>
+                <span className="text-xs">{accuracy.dataPoints} points (1 min interval)</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs flex items-center gap-1">
