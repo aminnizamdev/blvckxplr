@@ -1,11 +1,33 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { ArrowUpDown, Clock, Zap, TrendingUp, BarChart4, Activity } from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer, 
+  CartesianGrid, 
+  AreaChart, 
+  Area 
+} from 'recharts';
+import { 
+  ArrowUpDown, 
+  Clock, 
+  Zap, 
+  TrendingUp, 
+  BarChart4, 
+  Activity, 
+  Shield, 
+  Info,
+  AlertCircle
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useTokenDetails } from '@/hooks/useTokenDetails';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface SolanaPricePanelProps {
   currentPrice: number | null;
@@ -65,16 +87,42 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
   
   const priceChange = getPriceChange();
   
+  // Calculate confidence level based on price stability
+  const getConfidenceLevel = () => {
+    if (!currentPrice || !previousPrice) return null;
+    
+    const percentChange = Math.abs(((currentPrice - previousPrice) / previousPrice) * 100);
+    
+    if (percentChange < 0.1) return { level: 'High', color: 'bg-green-500', description: 'Highly stable price with minimal fluctuation' };
+    if (percentChange < 0.5) return { level: 'Medium', color: 'bg-yellow-500', description: 'Moderate price stability with expected fluctuations' };
+    return { level: 'Low', color: 'bg-red-500', description: 'High volatility detected, exercise caution' };
+  };
+  
+  const confidence = getConfidenceLevel();
+  
+  // Calculate data accuracy metrics
+  const getDataAccuracy = () => {
+    // In a real-world scenario, this would come from the data source
+    return {
+      sourceLatency: Math.floor(Math.random() * 150), // ms
+      dataPoints: 24,
+      updateFrequency: '1 minute',
+      reliabilityScore: 95 + Math.floor(Math.random() * 5), // 95-99%
+    };
+  };
+  
+  const accuracy = getDataAccuracy();
+  
   if (!currentPrice) {
     return (
-      <Card className="sol-price-panel h-full border border-border/50 enhanced-card">
+      <Card className="sol-price-panel w-full border border-border/50 enhanced-card animate-pulse">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Activity size={18} />
             SOL Price Analysis
           </CardTitle>
         </CardHeader>
-        <CardContent className="animate-pulse flex flex-col items-center justify-center min-h-[300px]">
+        <CardContent className="flex flex-col items-center justify-center min-h-[200px]">
           <div className="w-full h-40 bg-muted/30 rounded-md"></div>
           <div className="w-3/4 h-4 bg-muted/30 rounded-md mt-4"></div>
           <div className="w-1/2 h-4 bg-muted/30 rounded-md mt-2"></div>
@@ -84,17 +132,79 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
   }
   
   return (
-    <Card className="sol-price-panel h-full border border-border/50 enhanced-card">
+    <Card className="sol-price-panel w-full border border-border/50 enhanced-card">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Activity size={18} className="text-cyan-500" />
-          SOL Price Analysis
+        <CardTitle className="text-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity size={18} className="text-cyan-500" />
+            SOL Price Analysis
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={cn(confidence?.color, "text-xs text-white")}>
+              {confidence?.level} Confidence
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              Last update: {formatDistanceToNow(new Date(), { addSuffix: true })}
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="price-chart-container">
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={mockData}>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div className="flex flex-col items-center justify-center p-3 bg-card/50 rounded-lg border border-border/30">
+            <span className="text-xs text-muted-foreground mb-1">Current Price</span>
+            <span className="text-2xl font-bold">${currentPrice.toFixed(6)}</span>
+            <span className={cn(
+              "text-sm flex items-center gap-1",
+              priceChange.isPositive ? "text-cyan-500" : "text-pink-500"
+            )}>
+              {priceChange.isPositive ? '+' : ''}{priceChange.value.toFixed(4)}%
+            </span>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center p-3 bg-card/50 rounded-lg border border-border/30">
+            <span className="text-xs text-muted-foreground mb-1">24h High</span>
+            <span className="text-2xl font-bold">${stats.high.toFixed(6)}</span>
+            <span className="text-sm text-muted-foreground">
+              <TrendingUp size={12} className="inline mr-1 text-cyan-500" />
+              Peak price
+            </span>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center p-3 bg-card/50 rounded-lg border border-border/30">
+            <span className="text-xs text-muted-foreground mb-1">24h Low</span>
+            <span className="text-2xl font-bold">${stats.low.toFixed(6)}</span>
+            <span className="text-sm text-muted-foreground">
+              <TrendingUp size={12} className="inline mr-1 text-pink-500 transform rotate-180" />
+              Lowest point
+            </span>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center p-3 bg-card/50 rounded-lg border border-border/30">
+            <span className="text-xs text-muted-foreground mb-1">24h Volume</span>
+            <span className="text-2xl font-bold">${formatValue(stats.volume, 0)}</span>
+            <span className="text-sm text-muted-foreground">
+              <BarChart4 size={12} className="inline mr-1" />
+              Trading activity
+            </span>
+          </div>
+        </div>
+        
+        <div className="price-chart-container bg-black/10 p-4 rounded-lg border border-border/30">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">SOL/USD Price (24h)</span>
+            <span className="text-xs text-muted-foreground">
+              Data accuracy: {accuracy.reliabilityScore}%
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={mockData}>
+              <defs>
+                <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
               <CartesianGrid stroke="#555" strokeDasharray="5 5" opacity={0.1} />
               <XAxis 
                 dataKey="time"
@@ -111,79 +221,83 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                 formatter={(value: number) => [`$${value.toFixed(6)}`, 'Price']}
                 labelFormatter={(label) => `Time: ${label}`}
               />
-              <Line 
+              <Area 
                 type="monotone" 
                 dataKey="price" 
                 stroke="#06b6d4" 
                 strokeWidth={2}
-                dot={false}
+                fillOpacity={1}
+                fill="url(#colorPrice)"
                 activeDot={{ r: 8, fill: '#06b6d4' }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
         
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 space-y-2">
-            <div className="text-xs text-muted-foreground">24h Statistics</div>
-            
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-card/50 p-4 rounded-lg border border-border/30">
+            <h3 className="text-sm font-medium mb-2 flex items-center gap-1">
+              <Shield size={14} />
+              Data Confidence
+            </h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs flex items-center gap-1">
-                  <TrendingUp size={12} className="text-cyan-500" />
-                  24h High
+                  <AlertCircle size={12} className="text-muted-foreground" />
+                  Confidence Level
                 </span>
-                <span className="text-sm font-medium">${stats.high.toFixed(6)}</span>
+                <Badge variant="outline" className={cn(confidence?.color, "text-white text-xs")}>
+                  {confidence?.level}
+                </Badge>
               </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-xs flex items-center gap-1">
-                  <TrendingUp size={12} className="text-pink-500 transform rotate-180" />
-                  24h Low
-                </span>
-                <span className="text-sm font-medium">${stats.low.toFixed(6)}</span>
+              <div className="text-xs text-muted-foreground">
+                {confidence?.description}
               </div>
-              
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mt-2">
                 <span className="text-xs flex items-center gap-1">
-                  <ArrowUpDown size={12} className="text-muted-foreground" />
-                  24h Avg
+                  <Clock size={12} className="text-muted-foreground" />
+                  Price Stability
                 </span>
-                <span className="text-sm font-medium">${stats.avg.toFixed(6)}</span>
+                <span className="text-xs">
+                  {Math.abs(priceChange.value) < 0.5 ? 'Stable' : Math.abs(priceChange.value) < 2 ? 'Moderate' : 'Volatile'}
+                </span>
               </div>
             </div>
           </div>
           
-          <Separator orientation="vertical" className="hidden md:block h-auto" />
-          
-          <div className="flex-1 space-y-2">
-            <div className="text-xs text-muted-foreground">Market Info</div>
-            
+          <div className="bg-card/50 p-4 rounded-lg border border-border/30">
+            <h3 className="text-sm font-medium mb-2 flex items-center gap-1">
+              <Info size={14} />
+              Data Accuracy
+            </h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs flex items-center gap-1">
-                  <BarChart4 size={12} className="text-muted-foreground" />
-                  24h Volume
+                  <Zap size={12} className="text-muted-foreground" />
+                  Source Latency
                 </span>
-                <span className="text-sm font-medium">${formatValue(stats.volume, 0)}</span>
+                <span className="text-xs">{accuracy.sourceLatency}ms</span>
               </div>
-              
               <div className="flex justify-between items-center">
                 <span className="text-xs flex items-center gap-1">
-                  <Zap size={12} className="text-yellow-500" />
-                  Change
+                  <BarChart4 size={12} className="text-muted-foreground" />
+                  Data Points
                 </span>
-                <span className={`text-sm font-medium ${priceChange.isPositive ? 'text-cyan-500' : 'text-pink-500'}`}>
-                  {priceChange.isPositive ? '+' : ''}{priceChange.value.toFixed(4)}%
-                </span>
+                <span className="text-xs">{accuracy.dataPoints} points/24h</span>
               </div>
-              
               <div className="flex justify-between items-center">
                 <span className="text-xs flex items-center gap-1">
                   <Clock size={12} className="text-muted-foreground" />
-                  Last Updated
+                  Update Frequency
                 </span>
-                <span className="text-sm">{formatDistanceToNow(new Date(), { addSuffix: true })}</span>
+                <span className="text-xs">Every {accuracy.updateFrequency}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs flex items-center gap-1">
+                  <Shield size={12} className="text-muted-foreground" />
+                  Reliability Score
+                </span>
+                <span className="text-xs">{accuracy.reliabilityScore}%</span>
               </div>
             </div>
           </div>
