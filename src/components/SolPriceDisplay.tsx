@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArrowDown, ArrowUp, ArrowRight, AlertCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowRight, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -35,40 +35,74 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
   
   const confidence = getConfidenceLevel();
 
-  // Add timestamp for last update tracking
+  // Enhanced timestamp and data freshness tracking
   const [lastUpdateTime, setLastUpdateTime] = React.useState<Date>(new Date());
   const [staleWarningVisible, setStaleWarningVisible] = React.useState<boolean>(false);
+  const [connectionQuality, setConnectionQuality] = React.useState<'good' | 'unstable' | 'poor'>('good');
+  const [updateCount, setUpdateCount] = React.useState<number>(0);
   
   // Update timestamp whenever price updates
   React.useEffect(() => {
-    if (price) {
+    if (price !== null) {
       setLastUpdateTime(new Date());
       setStaleWarningVisible(false);
+      setUpdateCount(prev => prev + 1);
     }
   }, [price]);
+  
+  // Calculate update frequency
+  const [updateFrequency, setUpdateFrequency] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    const freqInterval = setInterval(() => {
+      const now = new Date();
+      const secondsElapsed = (now.getTime() - lastUpdateTime.getTime()) / 1000;
+      
+      // Set connection quality based on update frequency
+      if (secondsElapsed > 5) {
+        setConnectionQuality('poor');
+      } else if (secondsElapsed > 2) {
+        setConnectionQuality('unstable');
+      } else {
+        setConnectionQuality('good');
+      }
+      
+      if (secondsElapsed > 3) {
+        setStaleWarningVisible(true);
+      }
+    }, 1000);
+    
+    return () => clearInterval(freqInterval);
+  }, [lastUpdateTime]);
+  
+  // Calculate updates per second
+  React.useEffect(() => {
+    const frequencyTimer = setInterval(() => {
+      // Reset counter every 5 seconds and calculate average
+      setUpdateFrequency(updateCount / 5);
+      setUpdateCount(0);
+    }, 5000);
+    
+    return () => clearInterval(frequencyTimer);
+  }, [updateCount]);
   
   // Check if data might be stale
   const isDataPotentiallyStale = React.useMemo(() => {
     const now = new Date();
     const timeDifference = now.getTime() - lastUpdateTime.getTime();
-    // Consider data stale if no update in 5 seconds (much longer than refresh rate)
-    return timeDifference > 5000; 
+    // Consider data stale if no update in 3 seconds (longer than refresh rate)
+    return timeDifference > 3000; 
   }, [lastUpdateTime]);
-  
-  // Show warning tooltip after a delay if data is stale
-  React.useEffect(() => {
-    let timeout: NodeJS.Timeout;
-    
-    if (isDataPotentiallyStale && !staleWarningVisible) {
-      timeout = setTimeout(() => {
-        setStaleWarningVisible(true);
-      }, 2000);
+
+  // Connection quality indicator
+  const getConnectionIndicator = () => {
+    if (connectionQuality === 'good') {
+      return <Wifi size={16} className="text-green-500" />;
+    } else if (connectionQuality === 'unstable') {
+      return <Wifi size={16} className="text-yellow-500" />;
+    } else {
+      return <WifiOff size={16} className="text-red-500" />;
     }
-    
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [isDataPotentiallyStale, staleWarningVisible]);
+  };
 
   if (!price || isDataPotentiallyStale) {
     return (
@@ -87,6 +121,8 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
               </TooltipTrigger>
               <TooltipContent>
                 <p>Data may be stale. Last update: {lastUpdateTime.toLocaleTimeString()}</p>
+                <p>Connection appears to be {connectionQuality}.</p>
+                <p>Refresh rate: {updateFrequency ? `${updateFrequency.toFixed(1)} updates/sec` : 'calculating...'}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -123,12 +159,28 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
             {confidence.level} Confidence
           </Badge>
         )}
+        
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="ml-2">
+                {getConnectionIndicator()}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Connection: {connectionQuality}</p>
+              <p>Updates: {updateFrequency ? `${updateFrequency.toFixed(1)}/sec` : 'calculating...'}</p>
+              <p>Last update: {lastUpdateTime.toLocaleTimeString()}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <div className={cn(
         "text-muted-foreground",
         isLarge ? "text-sm" : "text-xs"
       )}>
-        SOL/USD • Updated {lastUpdateTime.toLocaleTimeString()} • Refreshing every 400ms
+        SOL/USD • Updated {lastUpdateTime.toLocaleTimeString()} • 
+        Refresh rate: {updateFrequency ? `${updateFrequency.toFixed(1)}/sec` : 'calculating...'}
       </div>
     </div>
   );
