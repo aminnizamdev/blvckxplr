@@ -4,7 +4,7 @@ import DashboardHeader from '@/components/DashboardHeader';
 import TokenCard from '@/components/TokenCard';
 import EmptyState from '@/components/EmptyState';
 import TokenDetailsModal from '@/components/TokenDetailsModal';
-import { useMockData } from '@/hooks/useMockData';
+import { useLiveData } from '@/hooks/useLiveData';
 import { TokenData } from '@/types/token';
 import SolPriceDisplay from '@/components/SolPriceDisplay';
 import { Toaster } from '@/components/ui/toaster';
@@ -21,7 +21,7 @@ const Index = () => {
     pumpStatus,
     isRefreshing,
     handleRefresh
-  } = useMockData();
+  } = useLiveData();
   
   const [selectedToken, setSelectedToken] = React.useState<TokenData | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
@@ -121,7 +121,7 @@ const Index = () => {
           {/* Token Grid */}
           <div className="dashboard-section">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Recent Tokens</h2>
+              <h2 className="text-xl font-semibold">Live Tokens</h2>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>Showing {sortedTokens.length} tokens</span>
               </div>
@@ -144,7 +144,7 @@ const Index = () => {
                   ? "Try a different search term or clear your filter" 
                   : "Waiting for new tokens to be created on PumpFun..."}
                 isLoading={isRefreshing}
-                buttonText={isRefreshing ? "Refreshing..." : "Refresh Data"}
+                buttonText={isRefreshing ? "Refreshing..." : "Refresh Connections"}
                 onAction={handleRefresh}
               />
             )}

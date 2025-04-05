@@ -1,89 +1,55 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    --foreground: 224 71.4% 4.1%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 262.1 83.3% 57.8%;
     --radius: 0.5rem;
-    
-    --success: 142.1 76.2% 36.3%;
-    --success-foreground: 355.7 100% 97.3%;
-    
-    --warning: 38 92% 50%;
-    --warning-foreground: 48 96% 89%;
-    
-    --error: 0 84.2% 60.2%;
-    --error-foreground: 210 40% 98%;
   }
-
+ 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-    
-    --success: 142.1 70.6% 45.3%;
-    --success-foreground: 144.9 80.4% 10%;
-    
-    --warning: 48 96% 89%;
-    --warning-foreground: 38 92% 50%;
-    
-    --error: 0 62.8% 30.6%;
-    --error-foreground: 210 40% 98%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 263.4 70% 50.4%;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
@@ -93,90 +59,84 @@
   }
 }
 
-@layer utilities {
+/* Token grid layout */
+.token-grid {
+  @apply grid gap-4;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* Data styling */
+.data-label {
+  @apply text-xs text-muted-foreground mb-1;
+}
+
+.data-value {
+  @apply text-sm font-medium;
+}
+
+/* Animation for price changes */
+@keyframes highlight {
+  0% { background-color: rgba(132, 204, 22, 0.2); }
+  100% { background-color: transparent; }
+}
+
+@keyframes highlight-red {
+  0% { background-color: rgba(239, 68, 68, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.price-increase {
+  animation: highlight 2s ease-in-out;
+}
+
+.price-decrease {
+  animation: highlight-red 2s ease-in-out;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Pulse effect for loading states */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Blinking effect for connection status */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-blink {
+  animation: blink 1.5s infinite;
+}
+
+/* Flash animation for new data */
+@keyframes flash {
+  0% { background-color: transparent; }
+  50% { background-color: rgba(147, 51, 234, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.token-card.new-data {
+  animation: flash 1.5s ease-in-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
   .token-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
-  }
-  
-  .dashboard-header {
-    @apply flex flex-col gap-4;
-  }
-  
-  .dashboard-section {
-    @apply bg-card rounded-lg border border-border/50 p-4 md:p-6;
-  }
-  
-  .data-label {
-    @apply text-xs text-muted-foreground mb-1;
-  }
-  
-  .data-value {
-    @apply text-sm font-medium;
-  }
-  
-  .trend-up {
-    @apply text-green-500;
-  }
-  
-  .trend-down {
-    @apply text-red-500;
-  }
-  
-  .trend-neutral {
-    @apply text-muted-foreground;
-  }
-  
-  .status-dot {
-    @apply h-2 w-2 rounded-full mr-2;
-  }
-  
-  .status-connected {
-    @apply bg-green-500;
-  }
-  
-  .status-disconnected {
-    @apply bg-red-500;
-  }
-  
-  .status-connecting {
-    @apply bg-yellow-500 animate-pulse;
-  }
-  
-  .connection-status {
-    @apply flex items-center text-xs;
-  }
-  
-  .token-card {
-    @apply transition-all duration-300 hover:shadow-md hover:-translate-y-1;
-  }
-  
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-out forwards;
-  }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .animate-pulse-glow {
-    animation: pulseGlow 2s ease-in-out infinite;
-  }
-  
-  @keyframes pulseGlow {
-    0%, 100% {
-      opacity: 1;
-      box-shadow: 0 0 0 rgba(59, 130, 246, 0);
-    }
-    50% {
-      opacity: 0.8;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
-    }
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }
