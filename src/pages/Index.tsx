@@ -1,3 +1,4 @@
+
 import React from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import TokenCard from '@/components/TokenCard';
@@ -83,80 +84,78 @@ const Index = () => {
   }, [filteredTokens, sortBy]);
 
   return (
-    <div className="min-h-screen flex flex-col relative">
-      <div className="z-10 relative">
-        <AppHeader />
-        
-        <div className="container mx-auto py-6 px-4 md:px-8 max-w-7xl flex-grow">
-          <section className="mb-8">
-            <div className="max-w-3xl">
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gradient-primary">Solana Token Analytics</h1>
-              <p className="text-muted-foreground mb-2">
-                Industrial-grade monitoring platform for tracking newly created tokens on the Solana blockchain.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Our platform provides real-time analytics, detailed market cap information, and developer wallet analysis
-                to help traders make informed decisions with high data integrity and confidence.
-              </p>
-            </div>
-          </section>
-          
-          <div className="mb-6">
-            <SolanaPricePanel 
-              currentPrice={solPrice}
-              previousPrice={prevSolPrice}
-            />
+    <div className="min-h-screen bg-background flex flex-col">
+      <AppHeader />
+      
+      <div className="container mx-auto py-6 px-4 md:px-8 max-w-7xl flex-grow">
+        <section className="mb-8">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Solana Token Analytics</h1>
+            <p className="text-muted-foreground mb-2">
+              Industrial-grade monitoring platform for tracking newly created tokens on the Solana blockchain.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Our platform provides real-time analytics, detailed market cap information, and developer wallet analysis
+              to help traders make informed decisions with high data integrity and confidence.
+            </p>
           </div>
-          
-          {/* Transaction Marquee */}
-          <TransactionMarquee
-            buyTransactions={buyTransactions}
-            sellTransactions={sellTransactions}
-            threshold={largeTransactionThreshold}
+        </section>
+        
+        <div className="mb-6">
+          <SolanaPricePanel 
+            currentPrice={solPrice}
+            previousPrice={prevSolPrice}
+          />
+        </div>
+        
+        {/* Transaction Marquee */}
+        <TransactionMarquee
+          buyTransactions={buyTransactions}
+          sellTransactions={sellTransactions}
+          threshold={largeTransactionThreshold}
+        />
+        
+        <div className="space-y-6">
+          <DashboardHeader
+            solPrice={solPrice}
+            prevSolPrice={prevSolPrice}
+            pumpStatus={pumpStatus}
+            pythStatus={pythStatus}
+            onRefresh={handleRefresh}
+            isRefreshing={isRefreshing}
+            onSearch={handleSearch}
+            onSort={handleSort}
           />
           
-          <div className="space-y-6">
-            <DashboardHeader
-              solPrice={solPrice}
-              prevSolPrice={prevSolPrice}
-              pumpStatus={pumpStatus}
-              pythStatus={pythStatus}
-              onRefresh={handleRefresh}
-              isRefreshing={isRefreshing}
-              onSearch={handleSearch}
-              onSort={handleSort}
-            />
-            
-            <div className="dashboard-section mb-32 glass-card p-4 rounded-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Live Tokens</h2>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Showing {sortedTokens.length} tokens (max {20})</span>
-                </div>
+          <div className="dashboard-section mb-32"> {/* Add bottom margin for fixed footer */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Live Tokens</h2>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Showing {sortedTokens.length} tokens (max {20})</span>
               </div>
-              
-              {sortedTokens.length > 0 ? (
-                <div className="token-grid">
-                  {sortedTokens.map((token) => (
-                    <TokenCard
-                      key={token.mint}
-                      token={token}
-                      onViewDetails={handleViewDetails}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState 
-                  message={searchTerm ? "No matching tokens found" : "No tokens found"}
-                  subMessage={searchTerm 
-                    ? "Try a different search term or clear your filter" 
-                    : "Waiting for new tokens to be created on PumpFun..."}
-                  isLoading={isRefreshing}
-                  buttonText={isRefreshing ? "Refreshing..." : "Refresh Connections"}
-                  onAction={handleRefresh}
-                />
-              )}
             </div>
+            
+            {sortedTokens.length > 0 ? (
+              <div className="token-grid">
+                {sortedTokens.map((token) => (
+                  <TokenCard
+                    key={token.mint}
+                    token={token}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState 
+                message={searchTerm ? "No matching tokens found" : "No tokens found"}
+                subMessage={searchTerm 
+                  ? "Try a different search term or clear your filter" 
+                  : "Waiting for new tokens to be created on PumpFun..."}
+                isLoading={isRefreshing}
+                buttonText={isRefreshing ? "Refreshing..." : "Refresh Connections"}
+                onAction={handleRefresh}
+              />
+            )}
           </div>
         </div>
       </div>

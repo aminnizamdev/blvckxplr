@@ -41,26 +41,7 @@
     @apply bg-background text-foreground;
     font-family: 'Roboto', sans-serif;
     padding-bottom: 250px; /* Add padding to account for fixed footer */
-    position: relative;
   }
-}
-
-/* Matrix background effect */
-.matrix-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  z-index: -10;
-  pointer-events: none;
-}
-
-/* Content overlay with proper contrast */
-.content-overlay {
-  position: relative;
-  z-index: 1;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.8) 40%, rgba(0,0,0,0.6) 100%);
 }
 
 /* Token grid layout */
@@ -165,15 +146,7 @@
 
 /* Glass card effect */
 .glass-card {
-  @apply bg-black/60 backdrop-blur-sm border border-white/10;
-}
-
-/* Matrix-influenced glass effect */
-.matrix-glass {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  @apply bg-black/40 backdrop-blur-sm border border-white/10;
 }
 
 /* Responsive adjustments */
@@ -201,7 +174,7 @@
 
 /* Enhanced Card Styling */
 .enhanced-card {
-  @apply bg-gradient-to-br from-black/90 to-black/60 border border-white/5 shadow-lg shadow-black/30 hover:shadow-xl hover:shadow-black/40 transition-all duration-300;
+  @apply bg-gradient-to-br from-card to-card/60 border border-white/5 shadow-lg shadow-black/30 hover:shadow-xl hover:shadow-black/40 transition-all duration-300;
 }
 
 /* Data Grid Styling */
@@ -216,7 +189,7 @@
 
 /* Text Gradient */
 .text-gradient-primary {
-  @apply bg-gradient-to-r from-pink-500 via-cyan-300 to-pink-500 bg-clip-text text-transparent;
+  @apply bg-gradient-to-r from-white via-cyan-300 to-white bg-clip-text text-transparent;
 }
 
 /* Marquee Animation */
