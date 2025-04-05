@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { TokenData, TokenTransaction } from '@/types/token';
 import { 
@@ -12,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 const LARGE_TRANSACTION_THRESHOLD = 1000;
 const MAX_TRANSACTIONS = 20;
 const MAX_PRICE_HISTORY = 30; // Maximum number of price points to keep (30 minutes)
+const RECONNECT_INTERVAL = 10000; // 10 seconds between reconnection attempts
 
 export const useLiveData = () => {
   const { toast } = useToast();
@@ -91,7 +93,8 @@ export const useLiveData = () => {
         onError: () => {
           setPythStatus('disconnected');
         }
-      }
+      },
+      RECONNECT_INTERVAL
     );
     
     // Initialize PumpFun WebSocket for token data
@@ -246,7 +249,8 @@ export const useLiveData = () => {
         onError: () => {
           setPumpStatus('disconnected');
         }
-      }
+      },
+      RECONNECT_INTERVAL
     );
     
     // Connect to WebSockets
@@ -305,17 +309,17 @@ export const useLiveData = () => {
     setTokens(Array.from(tokensMapRef.current.values()));
   };
   
-  // Manual refresh function (will reconnect sockets if disconnected)
+  // Manual refresh function (will reset connections if disconnected)
   const handleRefresh = () => {
     setIsRefreshing(true);
     
-    // Reconnect WebSockets if disconnected
+    // Reset WebSockets connections completely if disconnected
     if (pythStatus === 'disconnected' && pythWsRef.current) {
-      pythWsRef.current.connect();
+      pythWsRef.current.resetConnection();
     }
     
     if (pumpStatus === 'disconnected' && pumpWsRef.current) {
-      pumpWsRef.current.connect();
+      pumpWsRef.current.resetConnection();
     }
     
     // Force an update of token values

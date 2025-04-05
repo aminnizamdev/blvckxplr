@@ -24,50 +24,88 @@ export class WebSocketConnection {
   private isConnecting: boolean = false;
   private shouldReconnect: boolean = true;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  // Add a backoff mechanism to prevent rapid reconnection attempts
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 5;
+  private baseReconnectInterval: number;
+  // Add a flag to prevent multiple close event handlers firing
+  private isClosing: boolean = false;
+  // Add a connection stable timeout to prevent rapid connect/disconnect cycles
+  private stableConnectionTimeout: NodeJS.Timeout | null = null;
 
   constructor(url: string, handlers: WebSocketHandler, reconnectInterval: number = 5000) {
     this.url = url;
     this.handlers = handlers;
     this.reconnectInterval = reconnectInterval;
+    this.baseReconnectInterval = reconnectInterval;
   }
 
   public connect(): void {
     if (this.isConnecting || this.ws?.readyState === WebSocket.OPEN) return;
     
     this.isConnecting = true;
-    this.ws = new WebSocket(this.url);
+    this.isClosing = false;
+    
+    try {
+      this.ws = new WebSocket(this.url);
 
-    this.ws.onopen = () => {
+      this.ws.onopen = () => {
+        this.isConnecting = false;
+        this.reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+        console.log(`Connected to ${this.url}`);
+        
+        // Set a timeout to ensure the connection is stable before reporting it as connected
+        if (this.stableConnectionTimeout) {
+          clearTimeout(this.stableConnectionTimeout);
+        }
+        
+        this.stableConnectionTimeout = setTimeout(() => {
+          this.handlers.onOpen?.();
+        }, 500); // Wait for 500ms to ensure connection is stable
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.handlers.onMessage?.(data);
+        } catch (error) {
+          console.error("Failed to parse WebSocket message:", error);
+        }
+      };
+
+      this.ws.onclose = (event) => {
+        // Prevent multiple close handlers from firing
+        if (this.isClosing) return;
+        
+        this.isClosing = true;
+        this.isConnecting = false;
+        
+        if (this.stableConnectionTimeout) {
+          clearTimeout(this.stableConnectionTimeout);
+        }
+        
+        console.log(`Disconnected from ${this.url} with code: ${event.code}, reason: ${event.reason}`);
+        this.handlers.onClose?.();
+        
+        // Only attempt to reconnect if not a clean close (code 1000)
+        // and the client isn't deliberately disconnecting
+        if (this.shouldReconnect && event.code !== 1000) {
+          this.reconnect();
+        }
+      };
+
+      this.ws.onerror = (error) => {
+        console.error(`WebSocket error for ${this.url}:`, error);
+        this.handlers.onError?.(error);
+        this.isConnecting = false;
+        
+        // Don't close here, as onclose will be called automatically
+      };
+    } catch (error) {
+      console.error(`Failed to create WebSocket for ${this.url}:`, error);
       this.isConnecting = false;
-      console.log(`Connected to ${this.url}`);
-      this.handlers.onOpen?.();
-    };
-
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        this.handlers.onMessage?.(data);
-      } catch (error) {
-        console.error("Failed to parse WebSocket message:", error);
-      }
-    };
-
-    this.ws.onclose = () => {
-      this.isConnecting = false;
-      console.log(`Disconnected from ${this.url}`);
-      this.handlers.onClose?.();
       this.reconnect();
-    };
-
-    this.ws.onerror = (error) => {
-      console.error(`WebSocket error for ${this.url}:`, error);
-      this.handlers.onError?.(error);
-      this.isConnecting = false;
-      // Error usually triggers onclose too, but just in case:
-      if (this.ws?.readyState !== WebSocket.CLOSED) {
-        this.ws?.close();
-      }
-    };
+    }
   }
 
   public send(data: any): void {
@@ -79,16 +117,31 @@ export class WebSocketConnection {
   }
 
   private reconnect(): void {
-    if (!this.shouldReconnect) return;
+    if (!this.shouldReconnect || this.reconnectAttempts >= this.maxReconnectAttempts) {
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        console.log(`Maximum reconnection attempts (${this.maxReconnectAttempts}) reached for ${this.url}`);
+        this.shouldReconnect = false;
+      }
+      return;
+    }
     
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
     }
     
+    // Exponential backoff for reconnection attempts
+    const delay = Math.min(
+      this.baseReconnectInterval * Math.pow(1.5, this.reconnectAttempts),
+      30000 // Maximum 30 second delay
+    );
+    
+    this.reconnectAttempts++;
+    
+    console.log(`Attempting to reconnect to ${this.url} in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+    
     this.reconnectTimeout = setTimeout(() => {
-      console.log(`Attempting to reconnect to ${this.url}...`);
       this.connect();
-    }, this.reconnectInterval);
+    }, delay);
   }
 
   public disconnect(): void {
@@ -96,10 +149,23 @@ export class WebSocketConnection {
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
     }
+    if (this.stableConnectionTimeout) {
+      clearTimeout(this.stableConnectionTimeout);
+    }
+    
     if (this.ws) {
-      this.ws.close();
+      // Use a proper close code for clean disconnection
+      this.isClosing = true;
+      this.ws.close(1000, "Normal closure");
       this.ws = null;
     }
+  }
+
+  public resetConnection(): void {
+    this.disconnect();
+    this.shouldReconnect = true;
+    this.reconnectAttempts = 0;
+    this.connect();
   }
 
   public isOpen(): boolean {
