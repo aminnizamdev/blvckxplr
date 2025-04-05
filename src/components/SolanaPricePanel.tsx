@@ -5,12 +5,12 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  ResponsiveContainer, 
   CartesianGrid, 
-  AreaChart, 
-  Area,
+  BarChart, 
+  Bar,
   ReferenceLine,
-  Brush
+  Brush,
+  ResponsiveContainer
 } from 'recharts';
 import { 
   ArrowUpDown, 
@@ -49,11 +49,18 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
       const randomFactor = 0.98 + Math.random() * 0.04; // Random between 0.98 and 1.02
       const basePrice = currentPrice * (0.95 + (i/24) * 0.1); // Gradual trend upward
       const hourLabel = time.getHours() < 10 ? `0${time.getHours()}:00` : `${time.getHours()}:00`;
+      
+      // Calculate price change for this hour (for bar coloring)
+      const prevHourIndex = i > 0 ? i - 1 : 0;
+      const prevBasePrice = i > 0 ? currentPrice * (0.95 + (prevHourIndex/24) * 0.1) : basePrice;
+      const isIncrease = basePrice > prevBasePrice;
+      
       return {
         time: hourLabel,
         price: basePrice * randomFactor,
         volume: Math.round(1000 + Math.random() * 5000),
         timestamp: time.toISOString(),
+        increase: isIncrease,
       };
     });
   };
@@ -203,7 +210,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
         <div className="price-chart-container bg-black/30 p-6 rounded-lg border border-border/30 glass-card">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <span className="text-sm font-medium text-gradient-primary text-lg">SOL/USD Price (24h)</span>
+              <span className="text-sm font-medium text-gradient-primary text-lg">SOL/USD Price Histogram (24h)</span>
               <div className="text-xs text-muted-foreground mt-1">
                 Data reliability: {accuracy.reliabilityScore}% • Refresh rate: {accuracy.updateFrequency}
               </div>
@@ -224,9 +231,13 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                 label: "Price", 
                 color: "#06b6d4" 
               },
-              volume: { 
-                label: "Volume", 
-                color: "#4c1d95" 
+              priceIncrease: {
+                label: "Price Increase",
+                color: "#06b6d4"
+              },
+              priceDecrease: {
+                label: "Price Decrease",
+                color: "#ec4899"
               },
               average: {
                 label: "Average",
@@ -235,17 +246,7 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
             }}
             className="pb-4"
           >
-            <AreaChart data={mockData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.1}/>
-                </linearGradient>
-                <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4c1d95" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#4c1d95" stopOpacity={0.1}/>
-                </linearGradient>
-              </defs>
+            <BarChart data={mockData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
               <CartesianGrid stroke="#555" strokeDasharray="5 5" opacity={0.1} />
               <XAxis 
                 dataKey="time"
@@ -269,13 +270,13 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                       <div className="bg-black/80 border border-white/10 p-3 rounded-lg shadow-lg backdrop-blur-sm">
                         <p className="text-xs text-white/70 mb-1">{label}</p>
                         <p className="text-sm font-medium text-white">
-                          Price: <span className="text-cyan-400">${typeof payload[0].value === 'number' ? payload[0].value.toFixed(6) : payload[0].value}</span>
+                          Price: <span className={payload[0]?.payload?.increase ? "text-cyan-400" : "text-pink-400"}>
+                            ${typeof payload[0]?.value === 'number' ? payload[0]?.value.toFixed(6) : payload[0]?.value}
+                          </span>
                         </p>
-                        {payload[1] && (
-                          <p className="text-xs text-white/70 mt-1">
-                            Volume: <span className="text-purple-400">${formatValue(Number(payload[1].value), 0)}</span>
-                          </p>
-                        )}
+                        <p className="text-xs text-white/70 mt-1">
+                          Volume: <span className="text-purple-400">${formatValue(Number(payload[0]?.payload?.volume || 0), 0)}</span>
+                        </p>
                       </div>
                     );
                   }
@@ -293,24 +294,29 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                   fontSize: 10 
                 }} 
               />
-              <Area 
-                type="monotone" 
+              {/* Use conditional rendering to show different colored bars based on price movement */}
+              <Bar 
                 dataKey="price" 
-                stroke="#06b6d4" 
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorPrice)"
-                activeDot={{ r: 8, fill: "#06b6d4", strokeWidth: 2, stroke: "#fff" }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="volume" 
-                stroke="#4c1d95" 
-                strokeWidth={1}
-                fillOpacity={0.3}
-                fill="url(#colorVolume)"
-                // Removing the yAxisId since we're not using a second YAxis
-                hide={true}
+                name="Price"
+                radius={[4, 4, 0, 0]}
+                barSize={15}
+                shape={(props: any) => {
+                  const { fill, x, y, width, height } = props;
+                  const isIncrease = props.payload.increase;
+                  
+                  return (
+                    <rect
+                      x={x}
+                      y={y}
+                      width={width}
+                      height={height}
+                      fill={isIncrease ? "#06b6d4" : "#ec4899"}
+                      stroke="none"
+                      rx={4}
+                      ry={4}
+                    />
+                  );
+                }}
               />
               <Brush 
                 dataKey="time" 
@@ -320,11 +326,20 @@ const SolanaPricePanel = ({ currentPrice, previousPrice }: SolanaPricePanelProps
                 tickFormatter={(value) => value}
                 startIndex={12}
               />
-            </AreaChart>
+            </BarChart>
           </ChartContainer>
           
-          <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
-            <div>Source: Pyth Network</div>
+          <div className="flex justify-between text-xs text-muted-foreground mt-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-sm bg-cyan-500"></div>
+                <span>Price Increase</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-sm bg-pink-500"></div>
+                <span>Price Decrease</span>
+              </div>
+            </div>
             <div>Latency: {accuracy.sourceLatency}ms</div>
           </div>
         </div>
