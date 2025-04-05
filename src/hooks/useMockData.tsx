@@ -40,6 +40,7 @@ export const useMockData = () => {
         signature: "4XE7c8aLZfkgQgK7TV8uQM6Z1Ha7q9YK6WZcmxfHtYJ6rCvkEcJYXTtQQJZYEZJeqvDiHc5zH89xeQHEkjpZ7jD2",
         creator: "BrJDCrspkZHD2gqbP4NbgGJZ9pKEBsy2uZEP1x93HM7D",
         timestamp: Date.now() - 1000 * 60 * 10, // 10 minutes ago
+        createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
         marketCapSol: 7.82,
         marketCapUsd: 7.82 * (solPrice || 0),
         devBalance: 1000000,
@@ -54,6 +55,9 @@ export const useMockData = () => {
         prevDevValueUsd: 3.05 * (prevSolPrice || 0),
         prevEstTokenPriceSol: 0.00000745,
         prevEstTokenPriceUsd: 0.00000745 * (prevSolPrice || 0),
+        vTokensInBondingCurve: 1000000000,
+        hasDevActivity: true,
+        lastUpdate: Date.now()
       },
       {
         name: "Moon Shot",
@@ -62,6 +66,7 @@ export const useMockData = () => {
         signature: "3cqvqA5sDcWK4BStVLygbTPHxTZ7RLGN2Wj9YYGRTvjWXaXLULn2AEZhJvVPSHykFcuSKAum8KpzrMaLMQp5FtGs",
         creator: "5mAQtYLQxvqFTPaMAcgV9BoNBNhQGXKPUeGcERPmPxb5",
         timestamp: Date.now() - 1000 * 60 * 30, // 30 minutes ago
+        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
         marketCapSol: 15.43,
         marketCapUsd: 15.43 * (solPrice || 0),
         devBalance: 2500000,
@@ -76,6 +81,9 @@ export const useMockData = () => {
         prevDevValueUsd: 9.32 * (prevSolPrice || 0),
         prevEstTokenPriceSol: 0.00001489,
         prevEstTokenPriceUsd: 0.00001489 * (prevSolPrice || 0),
+        vTokensInBondingCurve: 1000000000,
+        hasDevActivity: true,
+        lastUpdate: Date.now()
       },
       {
         name: "Solana Bulls",
@@ -84,6 +92,7 @@ export const useMockData = () => {
         signature: "4pWLGbq4LH6JqkGdea3NPgc1YTZCNa3Z8nvbMxbJvAbNkWRXECfRPYDcKGe3PgHZ4Zc8M7HV9M1s2fAhY6hFKh8a",
         creator: "6EeUDE1CaMJrn9QLvzcHvv73RA9uLMVXLMPCdxcY1Lw6",
         timestamp: Date.now() - 1000 * 60 * 120, // 2 hours ago
+        createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
         marketCapSol: 3.87,
         marketCapUsd: 3.87 * (solPrice || 0),
         devBalance: 750000,
@@ -98,6 +107,9 @@ export const useMockData = () => {
         prevDevValueUsd: 2.06 * (prevSolPrice || 0),
         prevEstTokenPriceSol: 0.00000412,
         prevEstTokenPriceUsd: 0.00000412 * (prevSolPrice || 0),
+        vTokensInBondingCurve: 1000000000,
+        hasDevActivity: true,
+        lastUpdate: Date.now()
       }
     ];
     
@@ -156,6 +168,8 @@ export const useMockData = () => {
           devValueUsd: newDevValueUsd,
           estTokenPriceSol: newEstTokenPriceSol,
           estTokenPriceUsd: newEstTokenPriceUsd,
+          hasDevActivity: updateDevBalance,
+          lastUpdate: Date.now()
         };
       }));
       
