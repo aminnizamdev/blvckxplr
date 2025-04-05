@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowDown, ArrowUp, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -33,7 +34,25 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
   
   const confidence = getConfidenceLevel();
 
-  if (!price) {
+  // Add timestamp for last update tracking
+  const [lastUpdateTime, setLastUpdateTime] = React.useState<Date>(new Date());
+  
+  // Update timestamp whenever price updates
+  React.useEffect(() => {
+    if (price) {
+      setLastUpdateTime(new Date());
+    }
+  }, [price]);
+  
+  // Check if data might be stale
+  const isDataPotentiallyStale = React.useMemo(() => {
+    const now = new Date();
+    const timeDifference = now.getTime() - lastUpdateTime.getTime();
+    // Consider data stale if no update in 5 seconds (much longer than refresh rate)
+    return timeDifference > 5000; 
+  }, [lastUpdateTime]);
+
+  if (!price || isDataPotentiallyStale) {
     return (
       <div className="flex items-center gap-2 animate-pulse">
         <div className={cn(
@@ -77,7 +96,7 @@ const SolPriceDisplay = ({ price, previousPrice, isLarge = false }: SolPriceDisp
         "text-muted-foreground",
         isLarge ? "text-sm" : "text-xs"
       )}>
-        SOL/USD • Updated {new Date().toLocaleTimeString()}
+        SOL/USD • Updated {lastUpdateTime.toLocaleTimeString()}
       </div>
     </div>
   );
